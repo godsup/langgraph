@@ -1,0 +1,1773 @@
+{
+ "_note": "Recorded-style AWS API responses for the mock demo account (fictional). Replayed through migrate.adapters.aws.AwsAdapter by `python -m migrate.tools.build_aws_fixture` to produce inventory.json.",
+ "region": "eu-central-1",
+ "sts": [
+  {
+   "method": "get_caller_identity",
+   "response": {
+    "Account": "123456789012",
+    "Arn": "arn:aws:iam::123456789012:user/migration-readonly",
+    "UserId": "AIDAEXAMPLEUSERID0001"
+   }
+  }
+ ],
+ "ec2": [
+  {
+   "method": "describe_instances",
+   "response": {
+    "Reservations": [
+     {
+      "ReservationId": "r-00000000000000000",
+      "OwnerId": "123456789012",
+      "Instances": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60001",
+        "InstanceType": "t3.large",
+        "ImageId": "ami-0b5c1d2e3f4a5b6c7",
+        "LaunchTime": "2025-03-14T09:12:44+00:00",
+        "State": {
+         "Code": 16,
+         "Name": "running"
+        },
+        "Placement": {
+         "AvailabilityZone": "eu-central-1a",
+         "Tenancy": "default"
+        },
+        "PrivateIpAddress": "10.20.10.21",
+        "SubnetId": "subnet-0a1b2c3d4e5f60003",
+        "VpcId": "vpc-0c1a2b3c4d5e6f701",
+        "Architecture": "x86_64",
+        "RootDeviceName": "/dev/xvda",
+        "RootDeviceType": "ebs",
+        "SecurityGroups": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60002",
+          "GroupName": "web"
+         }
+        ],
+        "BlockDeviceMappings": [
+         {
+          "DeviceName": "/dev/xvda",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60101",
+           "Status": "attached",
+           "DeleteOnTermination": true,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         }
+        ],
+        "Tags": [
+         {
+          "Key": "Name",
+          "Value": "shop-web-1"
+         },
+         {
+          "Key": "Project",
+          "Value": "shop"
+         },
+         {
+          "Key": "Environment",
+          "Value": "prod"
+         }
+        ],
+        "PlatformDetails": "Linux/UNIX"
+       }
+      ]
+     },
+     {
+      "ReservationId": "r-00000000000000001",
+      "OwnerId": "123456789012",
+      "Instances": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60002",
+        "InstanceType": "t3.large",
+        "ImageId": "ami-0b5c1d2e3f4a5b6c7",
+        "LaunchTime": "2025-03-14T09:12:44+00:00",
+        "State": {
+         "Code": 16,
+         "Name": "running"
+        },
+        "Placement": {
+         "AvailabilityZone": "eu-central-1b",
+         "Tenancy": "default"
+        },
+        "PrivateIpAddress": "10.20.11.22",
+        "SubnetId": "subnet-0a1b2c3d4e5f60004",
+        "VpcId": "vpc-0c1a2b3c4d5e6f701",
+        "Architecture": "x86_64",
+        "RootDeviceName": "/dev/xvda",
+        "RootDeviceType": "ebs",
+        "SecurityGroups": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60002",
+          "GroupName": "web"
+         }
+        ],
+        "BlockDeviceMappings": [
+         {
+          "DeviceName": "/dev/xvda",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60102",
+           "Status": "attached",
+           "DeleteOnTermination": true,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         }
+        ],
+        "Tags": [
+         {
+          "Key": "Name",
+          "Value": "shop-web-2"
+         },
+         {
+          "Key": "Project",
+          "Value": "shop"
+         },
+         {
+          "Key": "Environment",
+          "Value": "prod"
+         }
+        ],
+        "PlatformDetails": "Linux/UNIX"
+       }
+      ]
+     },
+     {
+      "ReservationId": "r-00000000000000002",
+      "OwnerId": "123456789012",
+      "Instances": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60003",
+        "InstanceType": "c5.xlarge",
+        "ImageId": "ami-0b5c1d2e3f4a5b6c7",
+        "LaunchTime": "2025-03-14T09:12:44+00:00",
+        "State": {
+         "Code": 16,
+         "Name": "running"
+        },
+        "Placement": {
+         "AvailabilityZone": "eu-central-1a",
+         "Tenancy": "default"
+        },
+        "PrivateIpAddress": "10.20.10.31",
+        "SubnetId": "subnet-0a1b2c3d4e5f60003",
+        "VpcId": "vpc-0c1a2b3c4d5e6f701",
+        "Architecture": "x86_64",
+        "RootDeviceName": "/dev/xvda",
+        "RootDeviceType": "ebs",
+        "SecurityGroups": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60003",
+          "GroupName": "worker"
+         }
+        ],
+        "BlockDeviceMappings": [
+         {
+          "DeviceName": "/dev/xvda",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60103",
+           "Status": "attached",
+           "DeleteOnTermination": true,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         },
+         {
+          "DeviceName": "/dev/sdf",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60203",
+           "Status": "attached",
+           "DeleteOnTermination": false,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         }
+        ],
+        "Tags": [
+         {
+          "Key": "Name",
+          "Value": "shop-worker-1"
+         },
+         {
+          "Key": "Project",
+          "Value": "shop"
+         },
+         {
+          "Key": "Environment",
+          "Value": "prod"
+         },
+         {
+          "Key": "Role",
+          "Value": "batch"
+         },
+         {
+          "Key": "Schedule",
+          "Value": "cron: nightly exports 02:00"
+         }
+        ],
+        "PlatformDetails": "Linux/UNIX"
+       }
+      ]
+     },
+     {
+      "ReservationId": "r-00000000000000003",
+      "OwnerId": "123456789012",
+      "Instances": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60004",
+        "InstanceType": "m5.large",
+        "ImageId": "ami-0b5c1d2e3f4a5b6c7",
+        "LaunchTime": "2025-03-14T09:12:44+00:00",
+        "State": {
+         "Code": 16,
+         "Name": "running"
+        },
+        "Placement": {
+         "AvailabilityZone": "eu-central-1a",
+         "Tenancy": "default"
+        },
+        "PrivateIpAddress": "10.20.0.41",
+        "SubnetId": "subnet-0a1b2c3d4e5f60001",
+        "VpcId": "vpc-0c1a2b3c4d5e6f701",
+        "Architecture": "x86_64",
+        "RootDeviceName": "/dev/sda1",
+        "RootDeviceType": "ebs",
+        "SecurityGroups": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60005",
+          "GroupName": "rdp"
+         }
+        ],
+        "BlockDeviceMappings": [
+         {
+          "DeviceName": "/dev/sda1",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60104",
+           "Status": "attached",
+           "DeleteOnTermination": true,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         },
+         {
+          "DeviceName": "xvdf",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60204",
+           "Status": "attached",
+           "DeleteOnTermination": false,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         }
+        ],
+        "Tags": [
+         {
+          "Key": "Name",
+          "Value": "legacy-reporting"
+         },
+         {
+          "Key": "Project",
+          "Value": "shop"
+         },
+         {
+          "Key": "Environment",
+          "Value": "prod"
+         },
+         {
+          "Key": "Owner",
+          "Value": "finance-it"
+         }
+        ],
+        "PlatformDetails": "Windows",
+        "Platform": "windows",
+        "PublicIpAddress": "3.120.45.67"
+       }
+      ]
+     },
+     {
+      "ReservationId": "r-00000000000000004",
+      "OwnerId": "123456789012",
+      "Instances": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60011",
+        "InstanceType": "m5.xlarge",
+        "ImageId": "ami-0b5c1d2e3f4a5b6c7",
+        "LaunchTime": "2025-03-14T09:12:44+00:00",
+        "State": {
+         "Code": 16,
+         "Name": "running"
+        },
+        "Placement": {
+         "AvailabilityZone": "eu-central-1a",
+         "Tenancy": "default"
+        },
+        "PrivateIpAddress": "10.20.10.51",
+        "SubnetId": "subnet-0a1b2c3d4e5f60003",
+        "VpcId": "vpc-0c1a2b3c4d5e6f701",
+        "Architecture": "x86_64",
+        "RootDeviceName": "/dev/xvda",
+        "RootDeviceType": "ebs",
+        "SecurityGroups": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60006",
+          "GroupName": "eks"
+         }
+        ],
+        "BlockDeviceMappings": [
+         {
+          "DeviceName": "/dev/xvda",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60111",
+           "Status": "attached",
+           "DeleteOnTermination": true,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         }
+        ],
+        "Tags": [
+         {
+          "Key": "Name",
+          "Value": "shop-analytics-node-1"
+         },
+         {
+          "Key": "Project",
+          "Value": "shop"
+         },
+         {
+          "Key": "Environment",
+          "Value": "prod"
+         },
+         {
+          "Key": "eks:cluster-name",
+          "Value": "shop-analytics"
+         },
+         {
+          "Key": "eks:nodegroup-name",
+          "Value": "analytics-ng"
+         }
+        ],
+        "PlatformDetails": "Linux/UNIX"
+       }
+      ]
+     },
+     {
+      "ReservationId": "r-00000000000000005",
+      "OwnerId": "123456789012",
+      "Instances": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60012",
+        "InstanceType": "m5.xlarge",
+        "ImageId": "ami-0b5c1d2e3f4a5b6c7",
+        "LaunchTime": "2025-03-14T09:12:44+00:00",
+        "State": {
+         "Code": 16,
+         "Name": "running"
+        },
+        "Placement": {
+         "AvailabilityZone": "eu-central-1b",
+         "Tenancy": "default"
+        },
+        "PrivateIpAddress": "10.20.11.52",
+        "SubnetId": "subnet-0a1b2c3d4e5f60004",
+        "VpcId": "vpc-0c1a2b3c4d5e6f701",
+        "Architecture": "x86_64",
+        "RootDeviceName": "/dev/xvda",
+        "RootDeviceType": "ebs",
+        "SecurityGroups": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60006",
+          "GroupName": "eks"
+         }
+        ],
+        "BlockDeviceMappings": [
+         {
+          "DeviceName": "/dev/xvda",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60112",
+           "Status": "attached",
+           "DeleteOnTermination": true,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         }
+        ],
+        "Tags": [
+         {
+          "Key": "Name",
+          "Value": "shop-analytics-node-2"
+         },
+         {
+          "Key": "Project",
+          "Value": "shop"
+         },
+         {
+          "Key": "Environment",
+          "Value": "prod"
+         },
+         {
+          "Key": "eks:cluster-name",
+          "Value": "shop-analytics"
+         },
+         {
+          "Key": "eks:nodegroup-name",
+          "Value": "analytics-ng"
+         }
+        ],
+        "PlatformDetails": "Linux/UNIX"
+       }
+      ]
+     },
+     {
+      "ReservationId": "r-00000000000000006",
+      "OwnerId": "123456789012",
+      "Instances": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60013",
+        "InstanceType": "m5.xlarge",
+        "ImageId": "ami-0b5c1d2e3f4a5b6c7",
+        "LaunchTime": "2025-03-14T09:12:44+00:00",
+        "State": {
+         "Code": 16,
+         "Name": "running"
+        },
+        "Placement": {
+         "AvailabilityZone": "eu-central-1a",
+         "Tenancy": "default"
+        },
+        "PrivateIpAddress": "10.20.10.53",
+        "SubnetId": "subnet-0a1b2c3d4e5f60003",
+        "VpcId": "vpc-0c1a2b3c4d5e6f701",
+        "Architecture": "x86_64",
+        "RootDeviceName": "/dev/xvda",
+        "RootDeviceType": "ebs",
+        "SecurityGroups": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60006",
+          "GroupName": "eks"
+         }
+        ],
+        "BlockDeviceMappings": [
+         {
+          "DeviceName": "/dev/xvda",
+          "Ebs": {
+           "VolumeId": "vol-0a1b2c3d4e5f60113",
+           "Status": "attached",
+           "DeleteOnTermination": true,
+           "AttachTime": "2025-03-14T09:12:44+00:00"
+          }
+         }
+        ],
+        "Tags": [
+         {
+          "Key": "Name",
+          "Value": "shop-analytics-node-3"
+         },
+         {
+          "Key": "Project",
+          "Value": "shop"
+         },
+         {
+          "Key": "Environment",
+          "Value": "prod"
+         },
+         {
+          "Key": "eks:cluster-name",
+          "Value": "shop-analytics"
+         },
+         {
+          "Key": "eks:nodegroup-name",
+          "Value": "analytics-ng"
+         }
+        ],
+        "PlatformDetails": "Linux/UNIX"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_instance_types",
+   "response": {
+    "InstanceTypes": [
+     {
+      "InstanceType": "t3.large",
+      "VCpuInfo": {
+       "DefaultVCpus": 2
+      },
+      "MemoryInfo": {
+       "SizeInMiB": 8192
+      },
+      "ProcessorInfo": {
+       "SupportedArchitectures": [
+        "x86_64"
+       ]
+      }
+     },
+     {
+      "InstanceType": "c5.xlarge",
+      "VCpuInfo": {
+       "DefaultVCpus": 4
+      },
+      "MemoryInfo": {
+       "SizeInMiB": 8192
+      },
+      "ProcessorInfo": {
+       "SupportedArchitectures": [
+        "x86_64"
+       ]
+      }
+     },
+     {
+      "InstanceType": "m5.large",
+      "VCpuInfo": {
+       "DefaultVCpus": 2
+      },
+      "MemoryInfo": {
+       "SizeInMiB": 8192
+      },
+      "ProcessorInfo": {
+       "SupportedArchitectures": [
+        "x86_64"
+       ]
+      }
+     },
+     {
+      "InstanceType": "m5.xlarge",
+      "VCpuInfo": {
+       "DefaultVCpus": 4
+      },
+      "MemoryInfo": {
+       "SizeInMiB": 16384
+      },
+      "ProcessorInfo": {
+       "SupportedArchitectures": [
+        "x86_64"
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_volumes",
+   "response": {
+    "Volumes": [
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60101",
+      "Size": 30,
+      "VolumeType": "gp3",
+      "AvailabilityZone": "eu-central-1a",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60001",
+        "Device": "/dev/xvda",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60101",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 3000,
+      "Throughput": 125
+     },
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60102",
+      "Size": 30,
+      "VolumeType": "gp3",
+      "AvailabilityZone": "eu-central-1b",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60002",
+        "Device": "/dev/xvda",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60102",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 3000,
+      "Throughput": 125
+     },
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60103",
+      "Size": 30,
+      "VolumeType": "gp3",
+      "AvailabilityZone": "eu-central-1a",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60003",
+        "Device": "/dev/xvda",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60103",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 3000,
+      "Throughput": 125
+     },
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60203",
+      "Size": 200,
+      "VolumeType": "gp3",
+      "AvailabilityZone": "eu-central-1a",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60003",
+        "Device": "/dev/sdf",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60203",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 3000,
+      "Throughput": 125,
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "shop-worker-1-exports"
+       }
+      ]
+     },
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60104",
+      "Size": 100,
+      "VolumeType": "gp2",
+      "AvailabilityZone": "eu-central-1a",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60004",
+        "Device": "/dev/sda1",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60104",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 300
+     },
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60204",
+      "Size": 500,
+      "VolumeType": "io1",
+      "AvailabilityZone": "eu-central-1a",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60004",
+        "Device": "xvdf",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60204",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 10000,
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "legacy-reporting-data"
+       }
+      ]
+     },
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60111",
+      "Size": 80,
+      "VolumeType": "gp3",
+      "AvailabilityZone": "eu-central-1a",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60011",
+        "Device": "/dev/xvda",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60111",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 3000,
+      "Throughput": 125
+     },
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60112",
+      "Size": 80,
+      "VolumeType": "gp3",
+      "AvailabilityZone": "eu-central-1b",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60012",
+        "Device": "/dev/xvda",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60112",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 3000,
+      "Throughput": 125
+     },
+     {
+      "VolumeId": "vol-0a1b2c3d4e5f60113",
+      "Size": 80,
+      "VolumeType": "gp3",
+      "AvailabilityZone": "eu-central-1a",
+      "State": "in-use",
+      "Encrypted": true,
+      "CreateTime": "2025-03-14T09:12:44+00:00",
+      "Attachments": [
+       {
+        "InstanceId": "i-0a1b2c3d4e5f60013",
+        "Device": "/dev/xvda",
+        "State": "attached",
+        "VolumeId": "vol-0a1b2c3d4e5f60113",
+        "AttachTime": "2025-03-14T09:12:44+00:00",
+        "DeleteOnTermination": false
+       }
+      ],
+      "Iops": 3000,
+      "Throughput": 125
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_vpcs",
+   "response": {
+    "Vpcs": [
+     {
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "CidrBlock": "10.20.0.0/16",
+      "IsDefault": false,
+      "State": "available",
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "shop-prod-vpc"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_subnets",
+   "response": {
+    "Subnets": [
+     {
+      "SubnetId": "subnet-0a1b2c3d4e5f60001",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "CidrBlock": "10.20.0.0/24",
+      "AvailabilityZone": "eu-central-1a",
+      "MapPublicIpOnLaunch": true,
+      "State": "available",
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "shop-public-a"
+       }
+      ]
+     },
+     {
+      "SubnetId": "subnet-0a1b2c3d4e5f60002",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "CidrBlock": "10.20.1.0/24",
+      "AvailabilityZone": "eu-central-1b",
+      "MapPublicIpOnLaunch": true,
+      "State": "available",
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "shop-public-b"
+       }
+      ]
+     },
+     {
+      "SubnetId": "subnet-0a1b2c3d4e5f60003",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "CidrBlock": "10.20.10.0/24",
+      "AvailabilityZone": "eu-central-1a",
+      "MapPublicIpOnLaunch": false,
+      "State": "available",
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "shop-app-a"
+       }
+      ]
+     },
+     {
+      "SubnetId": "subnet-0a1b2c3d4e5f60004",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "CidrBlock": "10.20.11.0/24",
+      "AvailabilityZone": "eu-central-1b",
+      "MapPublicIpOnLaunch": false,
+      "State": "available",
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "shop-app-b"
+       }
+      ]
+     },
+     {
+      "SubnetId": "subnet-0a1b2c3d4e5f60005",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "CidrBlock": "10.20.20.0/24",
+      "AvailabilityZone": "eu-central-1a",
+      "MapPublicIpOnLaunch": false,
+      "State": "available",
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "shop-data-a"
+       }
+      ]
+     },
+     {
+      "SubnetId": "subnet-0a1b2c3d4e5f60006",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "CidrBlock": "10.20.21.0/24",
+      "AvailabilityZone": "eu-central-1b",
+      "MapPublicIpOnLaunch": false,
+      "State": "available",
+      "Tags": [
+       {
+        "Key": "Name",
+        "Value": "shop-data-b"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_security_groups",
+   "response": {
+    "SecurityGroups": [
+     {
+      "GroupId": "sg-0f1e2d3c4b5a60001",
+      "GroupName": "shop-alb-sg",
+      "Description": "Public HTTPS entry",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "IpPermissions": [
+       {
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0",
+          "Description": "HTTPS"
+         }
+        ],
+        "UserIdGroupPairs": []
+       },
+       {
+        "IpProtocol": "tcp",
+        "FromPort": 80,
+        "ToPort": 80,
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0",
+          "Description": "HTTP redirect"
+         }
+        ],
+        "UserIdGroupPairs": []
+       }
+      ],
+      "IpPermissionsEgress": [
+       {
+        "IpProtocol": "-1",
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0"
+         }
+        ]
+       }
+      ],
+      "OwnerId": "123456789012"
+     },
+     {
+      "GroupId": "sg-0f1e2d3c4b5a60002",
+      "GroupName": "shop-web-sg",
+      "Description": "Web tier",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "IpPermissions": [
+       {
+        "IpProtocol": "tcp",
+        "FromPort": 8080,
+        "ToPort": 8080,
+        "IpRanges": [],
+        "UserIdGroupPairs": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60001",
+          "Description": "from ALB"
+         }
+        ]
+       },
+       {
+        "IpProtocol": "tcp",
+        "FromPort": 22,
+        "ToPort": 22,
+        "IpRanges": [
+         {
+          "CidrIp": "10.20.0.0/16",
+          "Description": "SSH from VPC"
+         }
+        ],
+        "UserIdGroupPairs": []
+       }
+      ],
+      "IpPermissionsEgress": [
+       {
+        "IpProtocol": "-1",
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0"
+         }
+        ]
+       }
+      ],
+      "OwnerId": "123456789012"
+     },
+     {
+      "GroupId": "sg-0f1e2d3c4b5a60003",
+      "GroupName": "shop-worker-sg",
+      "Description": "Batch workers",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "IpPermissions": [
+       {
+        "IpProtocol": "tcp",
+        "FromPort": 22,
+        "ToPort": 22,
+        "IpRanges": [
+         {
+          "CidrIp": "10.20.0.0/16",
+          "Description": "SSH from VPC"
+         }
+        ],
+        "UserIdGroupPairs": []
+       }
+      ],
+      "IpPermissionsEgress": [
+       {
+        "IpProtocol": "-1",
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0"
+         }
+        ]
+       }
+      ],
+      "OwnerId": "123456789012"
+     },
+     {
+      "GroupId": "sg-0f1e2d3c4b5a60004",
+      "GroupName": "shop-db-sg",
+      "Description": "Databases",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "IpPermissions": [
+       {
+        "IpProtocol": "tcp",
+        "FromPort": 5432,
+        "ToPort": 5432,
+        "IpRanges": [],
+        "UserIdGroupPairs": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60002",
+          "Description": "PostgreSQL"
+         },
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60003",
+          "Description": "PostgreSQL"
+         },
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60006",
+          "Description": "PostgreSQL"
+         }
+        ]
+       },
+       {
+        "IpProtocol": "tcp",
+        "FromPort": 3306,
+        "ToPort": 3306,
+        "IpRanges": [],
+        "UserIdGroupPairs": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60002",
+          "Description": "MySQL CRM"
+         }
+        ]
+       }
+      ],
+      "IpPermissionsEgress": [
+       {
+        "IpProtocol": "-1",
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0"
+         }
+        ]
+       }
+      ],
+      "OwnerId": "123456789012"
+     },
+     {
+      "GroupId": "sg-0f1e2d3c4b5a60005",
+      "GroupName": "legacy-reporting-sg",
+      "Description": "Legacy reporting server",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "IpPermissions": [
+       {
+        "IpProtocol": "tcp",
+        "FromPort": 3389,
+        "ToPort": 3389,
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0",
+          "Description": "RDP"
+         }
+        ],
+        "UserIdGroupPairs": []
+       }
+      ],
+      "IpPermissionsEgress": [
+       {
+        "IpProtocol": "-1",
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0"
+         }
+        ]
+       }
+      ],
+      "OwnerId": "123456789012"
+     },
+     {
+      "GroupId": "sg-0f1e2d3c4b5a60006",
+      "GroupName": "eks-cluster-sg-shop-analytics",
+      "Description": "EKS created security group",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "IpPermissions": [
+       {
+        "IpProtocol": "-1",
+        "UserIdGroupPairs": [
+         {
+          "GroupId": "sg-0f1e2d3c4b5a60006"
+         }
+        ]
+       }
+      ],
+      "IpPermissionsEgress": [
+       {
+        "IpProtocol": "-1",
+        "IpRanges": [
+         {
+          "CidrIp": "0.0.0.0/0"
+         }
+        ]
+       }
+      ],
+      "OwnerId": "123456789012"
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_instance_types",
+   "response": {
+    "InstanceTypes": [
+     {
+      "InstanceType": "t3.medium",
+      "VCpuInfo": {
+       "DefaultVCpus": 2
+      },
+      "MemoryInfo": {
+       "SizeInMiB": 4096
+      },
+      "ProcessorInfo": {
+       "SupportedArchitectures": [
+        "x86_64"
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "rds": [
+  {
+   "method": "describe_db_instances",
+   "response": {
+    "DBInstances": [
+     {
+      "DBInstanceIdentifier": "shop-db",
+      "DBInstanceClass": "db.m5.large",
+      "Engine": "postgres",
+      "EngineVersion": "15.7",
+      "DBName": "shop",
+      "AllocatedStorage": 200,
+      "StorageType": "gp3",
+      "Iops": 3000,
+      "MultiAZ": true,
+      "PubliclyAccessible": false,
+      "StorageEncrypted": true,
+      "BackupRetentionPeriod": 7,
+      "AvailabilityZone": "eu-central-1a",
+      "DBInstanceStatus": "available",
+      "Endpoint": {
+       "Address": "shop-db.c1x2y3z4a5b6.eu-central-1.rds.amazonaws.com",
+       "Port": 5432
+      },
+      "VpcSecurityGroups": [
+       {
+        "VpcSecurityGroupId": "sg-0f1e2d3c4b5a60004",
+        "Status": "active"
+       }
+      ],
+      "DBSubnetGroup": {
+       "DBSubnetGroupName": "shop-data",
+       "VpcId": "vpc-0c1a2b3c4d5e6f701",
+       "Subnets": [
+        {
+         "SubnetIdentifier": "subnet-0a1b2c3d4e5f60005"
+        },
+        {
+         "SubnetIdentifier": "subnet-0a1b2c3d4e5f60006"
+        }
+       ]
+      },
+      "TagList": [
+       {
+        "Key": "Project",
+        "Value": "shop"
+       },
+       {
+        "Key": "Environment",
+        "Value": "prod"
+       }
+      ]
+     },
+     {
+      "DBInstanceIdentifier": "legacy-crm-mysql",
+      "DBInstanceClass": "db.t3.medium",
+      "Engine": "mysql",
+      "EngineVersion": "8.0.35",
+      "DBName": "crm",
+      "AllocatedStorage": 50,
+      "StorageType": "gp2",
+      "MultiAZ": false,
+      "PubliclyAccessible": false,
+      "StorageEncrypted": true,
+      "BackupRetentionPeriod": 3,
+      "AvailabilityZone": "eu-central-1b",
+      "DBInstanceStatus": "available",
+      "Endpoint": {
+       "Address": "legacy-crm-mysql.c1x2y3z4a5b6.eu-central-1.rds.amazonaws.com",
+       "Port": 3306
+      },
+      "VpcSecurityGroups": [
+       {
+        "VpcSecurityGroupId": "sg-0f1e2d3c4b5a60004",
+        "Status": "active"
+       }
+      ],
+      "DBSubnetGroup": {
+       "DBSubnetGroupName": "shop-data",
+       "VpcId": "vpc-0c1a2b3c4d5e6f701",
+       "Subnets": [
+        {
+         "SubnetIdentifier": "subnet-0a1b2c3d4e5f60005"
+        },
+        {
+         "SubnetIdentifier": "subnet-0a1b2c3d4e5f60006"
+        }
+       ]
+      },
+      "TagList": [
+       {
+        "Key": "Project",
+        "Value": "crm"
+       },
+       {
+        "Key": "Owner",
+        "Value": "sales-ops"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "s3": [
+  {
+   "method": "list_buckets",
+   "response": {
+    "Buckets": [
+     {
+      "Name": "shop-assets-prod",
+      "CreationDate": "2023-05-02T08:00:00+00:00"
+     },
+     {
+      "Name": "shop-logs-archive",
+      "CreationDate": "2022-11-20T08:00:00+00:00"
+     },
+     {
+      "Name": "shop-terraform-state-us",
+      "CreationDate": "2022-01-10T08:00:00+00:00"
+     },
+     {
+      "Name": "shop-user-uploads-prod",
+      "CreationDate": "2023-05-02T08:00:00+00:00"
+     }
+    ],
+    "Owner": {
+     "ID": "abc"
+    }
+   }
+  },
+  {
+   "method": "get_bucket_location",
+   "response": {
+    "LocationConstraint": "eu-central-1"
+   }
+  },
+  {
+   "method": "get_bucket_tagging",
+   "response": {
+    "TagSet": [
+     {
+      "Key": "Project",
+      "Value": "shop"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     }
+    ]
+   }
+  },
+  {
+   "method": "get_bucket_versioning",
+   "response": {}
+  },
+  {
+   "method": "get_bucket_website",
+   "error": "NoSuchWebsiteConfiguration"
+  },
+  {
+   "method": "get_bucket_location",
+   "response": {
+    "LocationConstraint": "eu-central-1"
+   }
+  },
+  {
+   "method": "get_bucket_tagging",
+   "response": {
+    "TagSet": [
+     {
+      "Key": "Project",
+      "Value": "shop"
+     },
+     {
+      "Key": "DataClass",
+      "Value": "logs"
+     }
+    ]
+   }
+  },
+  {
+   "method": "get_bucket_versioning",
+   "response": {}
+  },
+  {
+   "method": "get_bucket_website",
+   "error": "NoSuchWebsiteConfiguration"
+  },
+  {
+   "method": "get_bucket_location",
+   "response": {}
+  },
+  {
+   "method": "get_bucket_location",
+   "response": {
+    "LocationConstraint": "eu-central-1"
+   }
+  },
+  {
+   "method": "get_bucket_tagging",
+   "error": "NoSuchTagSet"
+  },
+  {
+   "method": "get_bucket_versioning",
+   "response": {
+    "Status": "Enabled"
+   }
+  },
+  {
+   "method": "get_bucket_website",
+   "error": "NoSuchWebsiteConfiguration"
+  }
+ ],
+ "cloudwatch": [
+  {
+   "method": "get_metric_data",
+   "response": {
+    "MetricDataResults": [
+     {
+      "Id": "s0",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [
+       "2026-10-08T00:00:00+00:00"
+      ],
+      "Values": [
+       195857301504.0
+      ],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s1",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s2",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s3",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s4",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s5",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s6",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s7",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s8",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "objects",
+      "Label": "NumberOfObjects",
+      "Timestamps": [
+       "2026-10-08T00:00:00+00:00"
+      ],
+      "Values": [
+       1248903.0
+      ],
+      "StatusCode": "Complete"
+     }
+    ],
+    "Messages": []
+   }
+  },
+  {
+   "method": "get_metric_data",
+   "response": {
+    "MetricDataResults": [
+     {
+      "Id": "s0",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [
+       "2026-10-08T00:00:00+00:00"
+      ],
+      "Values": [
+       128849018880.0
+      ],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s1",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s2",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s3",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s4",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s5",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s6",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s7",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [
+       "2026-10-08T00:00:00+00:00"
+      ],
+      "Values": [
+       2308974329856.0
+      ],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s8",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "objects",
+      "Label": "NumberOfObjects",
+      "Timestamps": [
+       "2026-10-08T00:00:00+00:00"
+      ],
+      "Values": [
+       4551230.0
+      ],
+      "StatusCode": "Complete"
+     }
+    ],
+    "Messages": []
+   }
+  },
+  {
+   "method": "get_metric_data",
+   "response": {
+    "MetricDataResults": [
+     {
+      "Id": "s0",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [
+       "2026-10-08T00:00:00+00:00"
+      ],
+      "Values": [
+       73766215680.0
+      ],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s1",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s2",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s3",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s4",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s5",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s6",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s7",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "s8",
+      "Label": "BucketSizeBytes",
+      "Timestamps": [],
+      "Values": [],
+      "StatusCode": "Complete"
+     },
+     {
+      "Id": "objects",
+      "Label": "NumberOfObjects",
+      "Timestamps": [
+       "2026-10-08T00:00:00+00:00"
+      ],
+      "Values": [
+       312554.0
+      ],
+      "StatusCode": "Complete"
+     }
+    ],
+    "Messages": []
+   }
+  }
+ ],
+ "elbv2": [
+  {
+   "method": "describe_load_balancers",
+   "response": {
+    "LoadBalancers": [
+     {
+      "LoadBalancerArn": "arn:aws:elasticloadbalancing:eu-central-1:123456789012:loadbalancer/app/shop-alb/50dc6c495c0c9188",
+      "LoadBalancerName": "shop-alb",
+      "DNSName": "shop-alb-1234567890.eu-central-1.elb.amazonaws.com",
+      "Scheme": "internet-facing",
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "Type": "application",
+      "State": {
+       "Code": "active"
+      },
+      "SecurityGroups": [
+       "sg-0f1e2d3c4b5a60001"
+      ],
+      "AvailabilityZones": [
+       {
+        "ZoneName": "eu-central-1a",
+        "SubnetId": "subnet-0a1b2c3d4e5f60001"
+       },
+       {
+        "ZoneName": "eu-central-1b",
+        "SubnetId": "subnet-0a1b2c3d4e5f60002"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_listeners",
+   "response": {
+    "Listeners": [
+     {
+      "ListenerArn": "arn:aws:elasticloadbalancing:eu-central-1:123456789012:listener/app/shop-alb/50dc6c495c0c9188/f2f7dc8efc522ab2",
+      "Port": 443,
+      "Protocol": "HTTPS",
+      "Certificates": [
+       {
+        "CertificateArn": "arn:aws:acm:eu-central-1:123456789012:certificate/3dcb0a41-bd72-4774-9ad9-756919c40557"
+       }
+      ],
+      "DefaultActions": [
+       {
+        "Type": "forward",
+        "TargetGroupArn": "arn:aws:elasticloadbalancing:eu-central-1:123456789012:targetgroup/shop-web-tg/73e2d6bc24d8a067"
+       }
+      ]
+     },
+     {
+      "ListenerArn": "arn:aws:elasticloadbalancing:eu-central-1:123456789012:listener/app/shop-alb/50dc6c495c0c9188/a1b2c3d4e5f6a7b8",
+      "Port": 80,
+      "Protocol": "HTTP",
+      "DefaultActions": [
+       {
+        "Type": "redirect",
+        "RedirectConfig": {
+         "Protocol": "HTTPS",
+         "Port": "443",
+         "StatusCode": "HTTP_301"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_target_groups",
+   "response": {
+    "TargetGroups": [
+     {
+      "TargetGroupArn": "arn:aws:elasticloadbalancing:eu-central-1:123456789012:targetgroup/shop-web-tg/73e2d6bc24d8a067",
+      "TargetGroupName": "shop-web-tg",
+      "Protocol": "HTTP",
+      "Port": 8080,
+      "VpcId": "vpc-0c1a2b3c4d5e6f701",
+      "TargetType": "instance",
+      "HealthCheckProtocol": "HTTP",
+      "HealthCheckPort": "traffic-port",
+      "HealthCheckPath": "/healthz"
+     }
+    ]
+   }
+  },
+  {
+   "method": "describe_target_health",
+   "response": {
+    "TargetHealthDescriptions": [
+     {
+      "Target": {
+       "Id": "i-0a1b2c3d4e5f60001",
+       "Port": 8080
+      },
+      "TargetHealth": {
+       "State": "healthy"
+      }
+     },
+     {
+      "Target": {
+       "Id": "i-0a1b2c3d4e5f60002",
+       "Port": 8080
+      },
+      "TargetHealth": {
+       "State": "healthy"
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "eks": [
+  {
+   "method": "list_clusters",
+   "response": {
+    "clusters": [
+     "shop-analytics"
+    ]
+   }
+  },
+  {
+   "method": "describe_cluster",
+   "response": {
+    "cluster": {
+     "name": "shop-analytics",
+     "arn": "arn:aws:eks:eu-central-1:123456789012:cluster/shop-analytics",
+     "version": "1.29",
+     "status": "ACTIVE",
+     "resourcesVpcConfig": {
+      "vpcId": "vpc-0c1a2b3c4d5e6f701",
+      "subnetIds": [
+       "subnet-0a1b2c3d4e5f60003",
+       "subnet-0a1b2c3d4e5f60004"
+      ],
+      "endpointPublicAccess": true,
+      "endpointPrivateAccess": true
+     },
+     "tags": {
+      "Project": "shop",
+      "Team": "data"
+     }
+    }
+   }
+  },
+  {
+   "method": "list_nodegroups",
+   "response": {
+    "nodegroups": [
+     "analytics-ng"
+    ]
+   }
+  },
+  {
+   "method": "describe_nodegroup",
+   "response": {
+    "nodegroup": {
+     "nodegroupName": "analytics-ng",
+     "clusterName": "shop-analytics",
+     "instanceTypes": [
+      "m5.xlarge"
+     ],
+     "scalingConfig": {
+      "minSize": 2,
+      "maxSize": 5,
+      "desiredSize": 3
+     },
+     "diskSize": 80,
+     "amiType": "AL2_x86_64",
+     "capacityType": "ON_DEMAND",
+     "status": "ACTIVE"
+    }
+   }
+  }
+ ]
+}

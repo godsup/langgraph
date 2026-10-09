@@ -1,0 +1,16 @@
+{
+  "responses": {
+    "i-0a1b2c3d4e5f60003": {
+      "choice": "c2i.4",
+      "rationale": "shop-worker-1 runs CPU-bound nightly exports (tags Role=batch, Schedule=cron) and uses 8 GiB today; the compute-optimised c2i.4 matches 4 vCPU / 8 GB without paying for unused memory."
+    },
+    "elb:shop-alb": {
+      "choice": "stackit_application_load_balancer",
+      "rationale": "The ALB terminates HTTPS (ACM certificate) and redirects HTTP to HTTPS; only the L7 application load balancer keeps TLS termination and the redirect at the edge, so the web servers need no change."
+    },
+    "*": {
+      "choice": "__none__",
+      "rationale": "No recorded decision for this resource."
+    }
+  }
+}

@@ -1,24 +1,24 @@
-"""Azure read-only MCP server.
-
-Stub: serves fixtures through the same interface as the AWS server. A real
-implementation (azure-mgmt-* SDKs, Reader role) will replace it later.
-"""
+"""Azure read-only MCP server (stub backed by fixtures, same tools as AWS)."""
 
 from __future__ import annotations
 
-from typing import Any
+import os
 
-from mcp_servers.common import load_fixture, make_server
+from mcp_servers.common import fixtures_dir, make_server
+from mcp_servers.inventory import register_inventory_tools
+from migrate.adapters.azure import AzureAdapter
 
 mcp = make_server(
     "azure_readonly", "Read-only Azure inventory (stub backed by fixtures)."
 )
-
-
-@mcp.tool()
-def get_inventory(region: str) -> dict[str, Any]:
-    """Return the normalised inventory of the Azure subscription in `region`."""
-    return load_fixture("azure", "inventory.json")
+register_inventory_tools(
+    mcp,
+    "azure",
+    lambda: AzureAdapter(
+        region=os.environ.get("AZURE_REGION", "germanywestcentral"),
+        fixture=fixtures_dir() / "azure" / "inventory.json",
+    ),
+)
 
 
 def main() -> None:

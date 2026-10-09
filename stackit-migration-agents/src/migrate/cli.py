@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import getpass
+import os
 import time
 from collections.abc import Coroutine
 from pathlib import Path
@@ -64,6 +65,14 @@ def _run[T](coro: Coroutine[Any, Any, T]) -> T:
     except PermissionError as exc:
         console.print(f"[bold red]Refused:[/] {exc}")
         raise typer.Exit(code=2) from exc
+    except Exception as exc:
+        if os.environ.get("MIGRATE_DEBUG") == "1":
+            raise
+        console.print(f"[bold red]Failed:[/] {type(exc).__name__}: {exc}")
+        console.print(
+            "[dim]The audit log has the details; set MIGRATE_DEBUG=1 for a traceback.[/]"
+        )
+        raise typer.Exit(code=1) from exc
 
 
 def _mock_banner(plan: MigrationPlan) -> None:

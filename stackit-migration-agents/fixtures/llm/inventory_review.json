@@ -1,0 +1,119 @@
+{
+  "responses": {
+    "aws": {
+      "classifications": [
+        {
+          "resource_id": "i-0a1b2c3d4e5f60001",
+          "role": "web frontend (stateless, behind ALB)",
+          "criticality": "high"
+        },
+        {
+          "resource_id": "i-0a1b2c3d4e5f60002",
+          "role": "web frontend (stateless, behind ALB)",
+          "criticality": "high"
+        },
+        {
+          "resource_id": "i-0a1b2c3d4e5f60003",
+          "role": "batch worker (nightly exports)",
+          "criticality": "medium"
+        },
+        {
+          "resource_id": "i-0a1b2c3d4e5f60004",
+          "role": "legacy Windows reporting server (finance)",
+          "criticality": "medium"
+        },
+        {
+          "resource_id": "i-0a1b2c3d4e5f60011",
+          "role": "EKS worker node (shop-analytics)",
+          "criticality": "low"
+        },
+        {
+          "resource_id": "i-0a1b2c3d4e5f60012",
+          "role": "EKS worker node (shop-analytics)",
+          "criticality": "low"
+        },
+        {
+          "resource_id": "i-0a1b2c3d4e5f60013",
+          "role": "EKS worker node (shop-analytics)",
+          "criticality": "low"
+        },
+        {
+          "resource_id": "rds:shop-db",
+          "role": "primary transactional database (shop)",
+          "criticality": "high"
+        },
+        {
+          "resource_id": "rds:legacy-crm-mysql",
+          "role": "CRM database (sales-ops)",
+          "criticality": "medium"
+        },
+        {
+          "resource_id": "s3:shop-assets-prod",
+          "role": "static assets and product images",
+          "criticality": "high"
+        },
+        {
+          "resource_id": "s3:shop-logs-archive",
+          "role": "log archive (retention)",
+          "criticality": "low"
+        },
+        {
+          "resource_id": "s3:shop-user-uploads-prod",
+          "role": "user-generated uploads",
+          "criticality": "high"
+        },
+        {
+          "resource_id": "elb:shop-alb",
+          "role": "public HTTPS entry point",
+          "criticality": "high"
+        },
+        {
+          "resource_id": "eks:shop-analytics",
+          "role": "analytics platform (Kubernetes)",
+          "criticality": "medium"
+        }
+      ],
+      "concerns": [
+        {
+          "resource_id": "sg-0f1e2d3c4b5a60005",
+          "severity": "high",
+          "concern": "legacy-reporting-sg allows RDP (TCP 3389) from 0.0.0.0/0 and the server has a public IP address.",
+          "suggestion": "Do not copy this rule to STACKIT. Restrict RDP to a VPN or bastion CIDR before or during the migration."
+        },
+        {
+          "resource_id": "rds:shop-db",
+          "severity": "high",
+          "concern": "shop-db is used by the web tier, the batch worker and the EKS analytics cluster (shop-db-sg allows all three); every consumer must switch at cutover.",
+          "suggestion": "List all connection strings (including Kubernetes secrets) and switch them in one maintenance window."
+        },
+        {
+          "resource_id": "i-0a1b2c3d4e5f60003",
+          "severity": "medium",
+          "concern": "Tags show nightly cron exports at 02:00; scheduled jobs and hard-coded AWS endpoints on the worker must be migrated.",
+          "suggestion": "Inventory crontab and application config on shop-worker-1 and schedule the cutover outside the 02:00 window."
+        },
+        {
+          "resource_id": "s3:shop-assets-prod",
+          "severity": "medium",
+          "concern": "Assets are probably referenced by AWS bucket URLs in HTML, CDN or app config; those links break after the move.",
+          "suggestion": "Search code and CDN configuration for amazonaws.com bucket URLs and plan a DNS-based or rewritten asset URL."
+        }
+      ]
+    },
+    "azure": {
+      "classifications": [
+        {
+          "resource_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/virtualMachines/vm-portal-1",
+          "role": "web portal server",
+          "criticality": "high"
+        },
+        {
+          "resource_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-portal",
+          "role": "portal database",
+          "criticality": "high"
+        }
+      ],
+      "concerns": []
+    }
+  }
+}

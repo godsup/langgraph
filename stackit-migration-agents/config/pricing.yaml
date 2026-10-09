@@ -1,0 +1,65 @@
+# Prices for the rough before/after cost estimate.
+#
+# TODO: fill from official price list. Every value below is a placeholder
+# (null) on purpose: this project never ships invented prices. Missing prices
+# are reported as "price not set" and listed by key in the discovery report.
+#
+# Sources to use:
+#   AWS     - https://aws.amazon.com/pricing/ (region eu-central-1)
+#   STACKIT - official STACKIT price list (portal / sales), region eu01
+#
+# Enter all prices in the currency below (convert USD to EUR for AWS).
+currency: EUR
+hours_per_month: 730
+
+aws:
+  # On-demand price per hour, keyed by instance type.
+  ec2_instance_hourly:
+    t3.large: null       # TODO: fill from official price list
+    c5.xlarge: null      # TODO: fill from official price list
+    m5.large: null       # TODO: fill from official price list (Windows!)
+    m5.xlarge: null      # TODO: fill from official price list
+  # EBS per GB-month, keyed by volume type.
+  ebs_gb_month:
+    gp2: null            # TODO: fill from official price list
+    gp3: null            # TODO: fill from official price list
+    io1: null            # TODO: fill from official price list (excl. IOPS)
+  # RDS per instance-hour (single-AZ; Multi-AZ is counted x2), keyed by class.
+  rds_instance_hourly:
+    db.m5.large: null    # TODO: fill from official price list
+    db.t3.medium: null   # TODO: fill from official price list
+  rds_storage_gb_month:
+    gp2: null            # TODO: fill from official price list
+    gp3: null            # TODO: fill from official price list
+  # S3 per GB-month, keyed by CloudWatch storage type.
+  s3_gb_month:
+    StandardStorage: null  # TODO: fill from official price list
+    GlacierStorage: null   # TODO: fill from official price list
+  lb_hourly:
+    application: null    # TODO: fill from official price list (excl. LCU)
+    network: null        # TODO: fill from official price list (excl. NLCU)
+  eks_cluster_hourly: null  # TODO: fill from official price list
+
+stackit:
+  # Per hour, keyed by machine type name.
+  machine_type_hourly:
+    g2i.2: null          # TODO: fill from official price list
+    g2i.4: null          # TODO: fill from official price list
+    c2i.4: null          # TODO: fill from official price list
+  # Block storage per GB-month, keyed by performance class ("default" = provider default).
+  volume_gb_month:
+    default: null        # TODO: fill from official price list
+  # PostgreSQL Flex per hour, keyed by flavor id.
+  postgresflex_flavor_hourly:
+    4.8-replica: null    # TODO: fill from official price list
+  postgresflex_storage_gb_month:
+    premium-perf2-stackit: null  # TODO: fill from official price list
+  # MariaDB per month, keyed by plan name.
+  mariadb_plan_month:
+    stackit-mariadb-1.2.10-single: null  # TODO: fill from official price list
+  object_storage_gb_month: null  # TODO: fill from official price list
+  # Load balancer per month, keyed by terraform type.
+  loadbalancer_month:
+    stackit_loadbalancer: null               # TODO: fill from official price list
+    stackit_application_load_balancer: null  # TODO: fill from official price list
+  ske_cluster_month: null  # TODO: fill from official price list

@@ -1,1 +1,218 @@
-{"account_id": "00000000-0000-0000-0000-000000000000", "region": "germanywestcentral", "resources": []}
+{
+  "_note": "Azure stub fixture (normalised). A real Azure adapter replaces this later.",
+  "cloud": "azure",
+  "account_id": "00000000-0000-0000-0000-000000000000",
+  "region": "germanywestcentral",
+  "sections": {
+    "compute_instances": [
+      {
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/virtualMachines/vm-portal-1",
+        "name": "vm-portal-1",
+        "kind": "compute_instance",
+        "source_type": "azure:compute:vm",
+        "region": "germanywestcentral",
+        "tags": {
+          "env": "prod"
+        },
+        "properties": {
+          "instance_type": "Standard_D2s_v5",
+          "vcpus": 2,
+          "memory_mib": 8192,
+          "gpu": false,
+          "architecture": "x86_64",
+          "platform": "linux",
+          "availability_zone": "germanywestcentral-1",
+          "private_ip": "10.30.1.4",
+          "public_ip": null,
+          "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/virtualNetworks/vnet-portal/subnets/snet-app",
+          "security_group_ids": [
+            "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-app"
+          ],
+          "root_device": "osdisk",
+          "volumes": [
+            {
+              "device": "osdisk",
+              "volume_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/disks/vm-portal-1-os"
+            },
+            {
+              "device": "lun0",
+              "volume_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/disks/vm-portal-1-data"
+            }
+          ],
+          "eks_cluster": null
+        },
+        "depends_on": [
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/virtualNetworks/vnet-portal/subnets/snet-app",
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-app"
+        ]
+      }
+    ],
+    "block_volumes": [
+      {
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/disks/vm-portal-1-os",
+        "name": "vm-portal-1-os",
+        "kind": "block_volume",
+        "source_type": "azure:compute:disk",
+        "region": "germanywestcentral",
+        "tags": {
+          "env": "prod"
+        },
+        "properties": {
+          "size_gib": 64,
+          "volume_type": "Premium_LRS",
+          "attachments": [
+            {
+              "instance_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/virtualMachines/vm-portal-1",
+              "device": "osdisk"
+            }
+          ],
+          "is_root": true,
+          "availability_zone": "germanywestcentral-1"
+        },
+        "depends_on": [
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/virtualMachines/vm-portal-1"
+        ]
+      },
+      {
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/disks/vm-portal-1-data",
+        "name": "vm-portal-1-data",
+        "kind": "block_volume",
+        "source_type": "azure:compute:disk",
+        "region": "germanywestcentral",
+        "tags": {
+          "env": "prod"
+        },
+        "properties": {
+          "size_gib": 256,
+          "volume_type": "Premium_LRS",
+          "attachments": [
+            {
+              "instance_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/virtualMachines/vm-portal-1",
+              "device": "lun0"
+            }
+          ],
+          "is_root": false,
+          "availability_zone": "germanywestcentral-1"
+        },
+        "depends_on": [
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Compute/virtualMachines/vm-portal-1"
+        ]
+      }
+    ],
+    "networks": [
+      {
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/virtualNetworks/vnet-portal",
+        "name": "vnet-portal",
+        "kind": "network",
+        "source_type": "azure:network:vnet",
+        "region": "germanywestcentral",
+        "tags": {
+          "env": "prod"
+        },
+        "properties": {
+          "cidr_block": "10.30.0.0/16"
+        },
+        "depends_on": []
+      },
+      {
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/virtualNetworks/vnet-portal/subnets/snet-app",
+        "name": "snet-app",
+        "kind": "subnet",
+        "source_type": "azure:network:subnet",
+        "region": "germanywestcentral",
+        "tags": {
+          "env": "prod"
+        },
+        "properties": {
+          "cidr_block": "10.30.1.0/24",
+          "vpc_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/virtualNetworks/vnet-portal",
+          "availability_zone": null
+        },
+        "depends_on": [
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/virtualNetworks/vnet-portal"
+        ]
+      }
+    ],
+    "security_groups": [
+      {
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-app",
+        "name": "nsg-app",
+        "kind": "security_group",
+        "source_type": "azure:network:nsg",
+        "region": "germanywestcentral",
+        "tags": {
+          "env": "prod"
+        },
+        "properties": {
+          "description": "App subnet NSG",
+          "vpc_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/virtualNetworks/vnet-portal",
+          "rules": [
+            {
+              "direction": "ingress",
+              "protocol": "tcp",
+              "port_min": 443,
+              "port_max": 443,
+              "cidr": "0.0.0.0/0",
+              "description": "HTTPS"
+            }
+          ]
+        },
+        "depends_on": []
+      }
+    ],
+    "databases": [
+      {
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-portal",
+        "name": "psql-portal",
+        "kind": "postgres",
+        "source_type": "azure:postgresql:flexible-server",
+        "region": "germanywestcentral",
+        "tags": {
+          "env": "prod"
+        },
+        "properties": {
+          "engine": "postgres",
+          "engine_version": "16",
+          "instance_class": "Standard_D2ds_v5",
+          "vcpus": 2,
+          "memory_mib": 8192,
+          "allocated_storage_gb": 128,
+          "storage_type": "Premium_LRS",
+          "multi_az": false,
+          "publicly_accessible": false,
+          "db_name": "portal",
+          "subnet_ids": [
+            "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Network/virtualNetworks/vnet-portal/subnets/snet-app"
+          ],
+          "vpc_security_group_ids": []
+        },
+        "depends_on": []
+      }
+    ],
+    "object_buckets": [
+      {
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-portal-prod/providers/Microsoft.Storage/storageAccounts/stportalprod",
+        "name": "stportalprod",
+        "kind": "object_bucket",
+        "source_type": "azure:storage:account",
+        "region": "germanywestcentral",
+        "tags": {
+          "env": "prod"
+        },
+        "properties": {
+          "size_bytes": 53687091200,
+          "object_count": 120000,
+          "storage_classes": {
+            "StandardStorage": 53687091200
+          },
+          "versioning": "Disabled",
+          "website": false,
+          "has_archive_storage": false
+        },
+        "depends_on": []
+      }
+    ],
+    "load_balancers": [],
+    "kubernetes_clusters": []
+  }
+}

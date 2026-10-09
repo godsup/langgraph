@@ -1,0 +1,128 @@
+{
+  "_note": "MOCK catalogue for demos. Names follow the STACKIT docs (machine types g2i.*/c2i.*, PostgreSQL Flex flavor ids like '4.8-replica', MariaDB plan 'stackit-mariadb-1.2.10-replica'), but the sizes and lists are ILLUSTRATIVE, not verified. Live runs query the STACKIT CLI instead.",
+  "machine_types": [
+    {
+      "name": "g2i.1",
+      "vcpus": 1,
+      "ram_mb": 4096
+    },
+    {
+      "name": "g2i.2",
+      "vcpus": 2,
+      "ram_mb": 8192
+    },
+    {
+      "name": "g2i.4",
+      "vcpus": 4,
+      "ram_mb": 16384
+    },
+    {
+      "name": "g2i.8",
+      "vcpus": 8,
+      "ram_mb": 32768
+    },
+    {
+      "name": "g2i.16",
+      "vcpus": 16,
+      "ram_mb": 65536
+    },
+    {
+      "name": "c2i.1",
+      "vcpus": 1,
+      "ram_mb": 2048
+    },
+    {
+      "name": "c2i.2",
+      "vcpus": 2,
+      "ram_mb": 4096
+    },
+    {
+      "name": "c2i.4",
+      "vcpus": 4,
+      "ram_mb": 8192
+    },
+    {
+      "name": "c2i.8",
+      "vcpus": 8,
+      "ram_mb": 16384
+    },
+    {
+      "name": "c2i.16",
+      "vcpus": 16,
+      "ram_mb": 32768
+    }
+  ],
+  "postgres_flavors": [
+    {
+      "id": "2.4",
+      "cpu": 2,
+      "memory_gb": 4,
+      "node_type": "Single"
+    },
+    {
+      "id": "2.4-replica",
+      "cpu": 2,
+      "memory_gb": 4,
+      "node_type": "Replica"
+    },
+    {
+      "id": "4.8",
+      "cpu": 4,
+      "memory_gb": 8,
+      "node_type": "Single"
+    },
+    {
+      "id": "4.8-replica",
+      "cpu": 4,
+      "memory_gb": 8,
+      "node_type": "Replica"
+    },
+    {
+      "id": "8.16",
+      "cpu": 8,
+      "memory_gb": 16,
+      "node_type": "Single"
+    },
+    {
+      "id": "8.16-replica",
+      "cpu": 8,
+      "memory_gb": 16,
+      "node_type": "Replica"
+    },
+    {
+      "id": "16.32",
+      "cpu": 16,
+      "memory_gb": 32,
+      "node_type": "Single"
+    },
+    {
+      "id": "16.32-replica",
+      "cpu": 16,
+      "memory_gb": 32,
+      "node_type": "Replica"
+    }
+  ],
+  "postgres_versions": [
+    "14",
+    "15",
+    "16",
+    "17"
+  ],
+  "mariadb_plans": [
+    {
+      "name": "stackit-mariadb-1.2.10-single",
+      "version": "10.11",
+      "description": "illustrative single-node plan"
+    },
+    {
+      "name": "stackit-mariadb-1.2.10-replica",
+      "version": "10.11",
+      "description": "plan name from provider docs example"
+    }
+  ],
+  "ske_kubernetes_versions": [
+    "1.30.11",
+    "1.31.7",
+    "1.32.3"
+  ]
+}

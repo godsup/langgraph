@@ -45,6 +45,7 @@ class ResourceKind(StrEnum):
     SECURITY_GROUP = "security_group"
     POSTGRES = "postgres"
     MYSQL = "mysql"
+    MARIADB = "mariadb"
     OBJECT_BUCKET = "object_bucket"
     LOAD_BALANCER = "load_balancer"
     KUBERNETES_CLUSTER = "kubernetes_cluster"
@@ -85,6 +86,8 @@ class TargetMapping(Model):
     rationale: str = ""
     decided_by: DecidedBy = DecidedBy.RULE
     needs_review: bool = False
+    role: str = ""  # LLM workload classification, e.g. "web frontend"
+    criticality: str | None = None  # LLM: high | medium | low
 
 
 class GapSeverity(StrEnum):
@@ -98,6 +101,7 @@ class Gap(Model):
     reason: str
     severity: GapSeverity = GapSeverity.MEDIUM
     suggestion: str = ""
+    source: Literal["rule", "llm"] = "rule"  # llm = flagged by the LLM review
 
 
 class CostLine(Model):
@@ -122,6 +126,8 @@ class DiscoveryResult(Model):
     account_id: str | None = None
     summary: str = ""  # LLM-written executive summary
     report_path: str | None = None
+    catalog_source: str | None = None  # where STACKIT offerings came from
+    notes: list[str] = Field(default_factory=list)  # assumptions and TODOs
 
 
 # --------------------------------------------------------------------------

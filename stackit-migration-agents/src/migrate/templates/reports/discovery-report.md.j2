@@ -1,0 +1,95 @@
+{% set icon = {"mapped": "✅ mapped", "partial": "⚠️ review", "gap": "❌ gap"} %}
+# Discovery report: {{ plan.source_cloud.value | upper }} → STACKIT
+
+| | |
+|---|---|
+| Run | `{{ plan.run_id }}` |
+| Source | {{ plan.source_cloud.value | upper }} account `{{ plan.discovery.account_id }}`, region `{{ plan.source_region }}` |
+| Target | STACKIT, region `{{ plan.target_region }}` |
+| Generated | {{ plan.discovery.completed_at.strftime("%Y-%m-%d %H:%M UTC") }} |
+{% if plan.mock %}
+| Mode | **MOCK**: recorded fixtures, no cloud calls |
+{% endif %}
+
+## Executive summary
+
+{{ plan.discovery.summary }}
+
+## At a glance
+
+| Metric | Value |
+|---|---:|
+| Resources discovered | {{ plan.resources | length }} |
+| ✅ Clean mapping | {{ counts.get("mapped", 0) }} |
+| ⚠️ Mapping needs review | {{ counts.get("partial", 0) }} |
+| ❌ No clean STACKIT equivalent | {{ counts.get("gap", 0) }} |
+| Issues flagged (rules + LLM review) | {{ plan.gaps | length }} |
+| Monthly cost, source → target | {% if plan.cost.missing_prices %}incomplete ({{ plan.cost.missing_prices | length }} prices not set){% else %}{{ plan.cost.source_total | money(plan.cost.currency) }} → {{ plan.cost.target_total | money(plan.cost.currency) }}{% endif %} |
+
+## Inventory and STACKIT mapping
+
+| Resource | Source type | Role | STACKIT target | Terraform | Status | Issues | Notes |
+|---|---|---|---|---|---|---:|---|
+{% for res, m in rows %}
+| {{ res.name | cell }} | `{{ res.source_type }}` | {{ (m.role if m and m.role else "-") | cell }} | {{ (m.target_service if m else "-") | cell }} | {% if m and m.terraform_type %}`{{ m.terraform_type }}`{% else %}-{% endif %} | {{ icon[m.status.value] if m else "-" }} | {{ issues.get(res.id, 0) or "" }} | {{ (m.rationale if m else "") | cell }} |
+{% endfor %}
+
+## Gaps and risks
+
+{% if not gaps %}
+No gaps found.
+{% endif %}
+{% for gap, res in gaps %}
+### {{ loop.index }}. {{ res.name }}: {{ gap.severity.value | upper }}
+
+- **Issue:** {{ gap.reason }}
+{% if gap.suggestion %}
+- **Suggestion:** {{ gap.suggestion }}
+{% endif %}
+- **Flagged by:** {{ "LLM review (confirm with the workload owner)" if gap.source == "llm" else "mapping rule (config/mapping.yaml)" }}
+
+{% endfor %}
+## Cost estimate (rough)
+
+| Resource | Sizing | {{ plan.source_cloud.value | upper }} / month | STACKIT / month | Note |
+|---|---|---:|---:|---|
+{% for line in plan.cost.lines %}
+| {{ names.get(line.resource_id, line.resource_id) | cell }} | {{ line.description | cell }} | {{ line.source_monthly | money(plan.cost.currency) }} | {{ line.target_monthly | money(plan.cost.currency) }} | {{ line.note | cell }} |
+{% endfor %}
+| **Total (known prices only)** | | **{{ plan.cost.source_total | money(plan.cost.currency) }}** | **{{ plan.cost.target_total | money(plan.cost.currency) }}** | |
+
+{{ plan.cost.disclaimer }}
+
+{% if plan.cost.missing_prices %}
+<details><summary>Prices to fill in <code>config/pricing.yaml</code> ({{ plan.cost.missing_prices | length }})</summary>
+
+{% for key in plan.cost.missing_prices %}
+- `{{ key }}`
+{% endfor %}
+
+</details>
+{% endif %}
+
+## Decisions made by the LLM
+
+{% if not llm_decisions %}
+All mappings were decided by rules.
+{% endif %}
+{% for m, res in llm_decisions %}
+- **{{ res.name }}** → `{{ m.terraform_type }}`{% if m.decided_by.value == "fallback" %} (LLM unavailable or invalid answer: rule default used){% endif %}: {{ m.rationale }}
+{% endfor %}
+
+## Assumptions and open items
+
+- STACKIT catalogue source: `{{ plan.discovery.catalog_source }}`.
+{% for note in plan.discovery.notes %}
+- {{ note }}
+{% endfor %}
+- Mapping rules: `config/mapping.yaml` (editable). Items marked TODO there need verification.
+- Discovery is read-only: no resource on the source account was changed.
+
+## Next steps
+
+1. Review ⚠️ and ❌ items with the workload owners.
+2. Fill in missing prices in `config/pricing.yaml` and re-run discovery for a complete cost view.
+3. Generate the target Terraform: `migrate plan {{ plan.run_id }}`.

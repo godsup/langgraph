@@ -1,0 +1,180 @@
+# Resource mapping: source cloud -> STACKIT. Edit freely; no code changes needed.
+#
+# Every target below was checked against the official STACKIT Terraform
+# provider docs (github.com/stackitcloud/terraform-provider-stackit, docs/,
+# commit 3d09199 of 2026-10-09). Items marked TODO could not be verified and
+# need a human check before a client engagement.
+version: 1
+
+kinds:
+  compute_instance:
+    status: mapped
+    target_service: STACKIT Compute Engine server
+    terraform_type: stackit_server
+    sizing: machine_type
+    # EC2 nodes of an EKS cluster are covered by the SKE node pool instead.
+    managed_by_kubernetes:
+      status: mapped
+      target_service: SKE node pool (see kubernetes cluster)
+      terraform_type: null
+
+  block_volume:
+    status: mapped
+    target_service: STACKIT Block Storage volume
+    terraform_type: stackit_volume
+    # Root volumes become the server's boot_volume and get no own resource.
+    root_volume:
+      status: mapped
+      target_service: Server boot volume
+      terraform_type: null
+    # TODO(verify): STACKIT volume performance class names per EBS type.
+    # null = provider default class.
+    performance_class:
+      gp2: null
+      gp3: null
+      io1: null
+      io2: null
+      st1: null
+      sc1: null
+      standard: null
+
+  network:
+    status: mapped
+    target_service: STACKIT project networking (no 1:1 resource)
+    terraform_type: null
+    note: >-
+      A VPC has no direct equivalent; each subnet becomes a stackit_network.
+      stackit_vpc exists but is experimental (provider experiments = ["vpc"]),
+      so it is not used.
+
+  subnet:
+    status: mapped
+    target_service: STACKIT network
+    terraform_type: stackit_network
+
+  security_group:
+    status: mapped
+    target_service: STACKIT security group
+    terraform_type: stackit_security_group
+
+  postgres:
+    status: mapped
+    target_service: STACKIT PostgreSQL Flex
+    terraform_type: stackit_postgresflex_instance
+    sizing: postgres_flavor
+    # From the provider docs example; TODO(verify) class options per flavor
+    # with `stackit postgresflex flavor describe <id>`.
+    storage_class: premium-perf2-stackit
+    backup_schedule: "0 2 * * *"
+
+  mariadb:
+    status: mapped
+    target_service: STACKIT MariaDB
+    terraform_type: stackit_mariadb_instance
+    sizing: mariadb_plan
+
+  mysql:
+    status: partial
+    target_service: STACKIT MariaDB
+    terraform_type: stackit_mariadb_instance
+    sizing: mariadb_plan
+    reason: >-
+      STACKIT has no managed MySQL in the Terraform provider or CLI (checked
+      2026-10-09; no mysql/mysqlflex resources). MariaDB is the closest managed
+      option but is not 100% MySQL-compatible (e.g. JSON functions, auth plugins,
+      MySQL 8 specific syntax). Alternative: self-managed MySQL on stackit_server.
+    severity: medium
+
+  object_bucket:
+    status: mapped
+    target_service: STACKIT Object Storage (S3-compatible)
+    terraform_type: stackit_objectstorage_bucket
+
+  load_balancer:
+    # Chosen by lb_type. Application load balancers are ambiguous: the LLM picks
+    # one of the candidates and explains why; a human reviews it.
+    network:
+      status: mapped
+      target_service: STACKIT Network Load Balancer (L4)
+      terraform_type: stackit_loadbalancer
+    application:
+      status: partial
+      candidates:
+        - terraform_type: stackit_application_load_balancer
+          target_service: STACKIT Application Load Balancer (L7)
+          note: TLS termination, host/path routing, HTTP health checks.
+        - terraform_type: stackit_loadbalancer
+          target_service: STACKIT Network Load Balancer (L4)
+          note: TCP pass-through; TLS must terminate on the backends.
+      reason: >-
+        ALB listener rules, TLS certificates (ACM) and redirects must be
+        re-created; certificates cannot be exported from ACM.
+      severity: medium
+
+  kubernetes_cluster:
+    status: mapped
+    target_service: STACKIT Kubernetes Engine (SKE)
+    terraform_type: stackit_ske_cluster
+    sizing: machine_type
+
+  other:
+    status: gap
+    reason: No STACKIT equivalent configured in config/mapping.yaml.
+    severity: high
+
+# Flag rules: evaluated for every resource, all matching rules apply.
+# `when` keys are `kind` or a property name; a list value means "any of".
+rules:
+  - when: {kind: compute_instance, platform: windows}
+    status: gap
+    severity: high
+    reason: Windows Server workload. Licensing and image availability on STACKIT must be clarified.
+    suggestion: Check STACKIT Windows images and licence terms (BYOL vs. included), or re-platform to Linux.
+
+  - when: {kind: compute_instance, architecture: arm64}
+    status: gap
+    severity: high
+    reason: ARM (Graviton) instance. No ARM machine type was verified in the STACKIT catalogue.
+    suggestion: Rebuild for x86_64, or confirm ARM availability with STACKIT.
+
+  - when: {kind: compute_instance, gpu: true}
+    status: gap
+    severity: high
+    reason: GPU instance. GPU machine types were not verified on STACKIT.
+    suggestion: Confirm GPU availability and quota with STACKIT before migrating.
+
+  - when: {kind: block_volume, volume_type: [io1, io2]}
+    status: partial
+    severity: medium
+    reason: Provisioned-IOPS volume. Matching STACKIT performance class must be chosen manually.
+    suggestion: Pick a STACKIT volume performance class that meets the measured IOPS.
+
+  - when: {kind: postgres, engine: aurora-postgresql}
+    status: partial
+    severity: medium
+    reason: Aurora PostgreSQL. Aurora-specific features (global database, fast clones, aurora_* functions) have no equivalent.
+    suggestion: Check the application for Aurora-only features before migrating to PostgreSQL Flex.
+
+  - when: {kind: object_bucket, website: true}
+    status: partial
+    severity: medium
+    reason: Bucket serves a static website. Static website hosting on STACKIT Object Storage was not verified.
+    suggestion: "TODO(verify): confirm static website support, or serve via STACKIT CDN / a web server."
+
+  - when: {kind: object_bucket, has_archive_storage: true}
+    status: partial
+    severity: low
+    reason: Bucket holds Glacier / Deep Archive objects. These must be restored before they can be copied.
+    suggestion: Restore archived objects (cost and time!) or leave the archive on AWS.
+
+  - when: {kind: object_bucket, versioning: Enabled}
+    status: partial
+    severity: low
+    reason: Versioning is enabled. Only current object versions are copied by default.
+    suggestion: Decide whether object history must be migrated; enable versioning on the STACKIT bucket if required.
+
+  - when: {kind: [postgres, mysql, mariadb], publicly_accessible: true}
+    status: partial
+    severity: medium
+    reason: Database is publicly accessible on AWS.
+    suggestion: Restrict the STACKIT ACL to the application networks; do not copy 0.0.0.0/0.
