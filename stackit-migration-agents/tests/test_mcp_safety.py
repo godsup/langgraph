@@ -11,7 +11,7 @@ from migrate.approval import SECRET_ENV, ApprovalError, ApprovalTokens, sha256_f
 def run_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     run_dir = tmp_path / "20261009-120000-abcd"
     (run_dir / "terraform").mkdir(parents=True)
-    (run_dir / "terraform" / "tfplan").write_text("plan")
+    (run_dir / "terraform" / "tfplan").write_text('{"simulated": true, "changes": []}')
     monkeypatch.setenv("MIGRATE_RUN_DIR", str(run_dir))
     monkeypatch.setenv("MIGRATE_RUN_ID", run_dir.name)
     monkeypatch.setenv("MIGRATE_MOCK", "1")

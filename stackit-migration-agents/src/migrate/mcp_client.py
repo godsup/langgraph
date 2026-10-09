@@ -263,7 +263,20 @@ class McpHub:
 
     @asynccontextmanager
     async def toolbox(self, server: str, *, agent: str) -> AsyncIterator[ToolBox]:
-        """One server session for the duration of an agent step."""
-        async with self._client.session(server) as session:
-            tools = await load_mcp_tools(session, handle_tool_errors=False)
-            yield ToolBox(server, agent, tools, self.audit)
+        """One server session for the duration of an agent step.
+
+        The stdio session runs in an anyio task group, which wraps errors in
+        an ExceptionGroup; the original exception is re-raised so callers can
+        handle PermissionError, ToolCallError etc. normally.
+        """
+        try:
+            async with self._client.session(server) as session:
+                tools = await load_mcp_tools(session, handle_tool_errors=False)
+                yield ToolBox(server, agent, tools, self.audit)
+        except BaseExceptionGroup as group:
+            leaf: BaseException = group
+            while isinstance(leaf, BaseExceptionGroup) and len(leaf.exceptions) == 1:
+                leaf = leaf.exceptions[0]
+            if leaf is group:
+                raise
+            raise leaf from group

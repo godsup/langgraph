@@ -243,7 +243,7 @@ class MappingEngine:
         elif kind == ResourceKind.POSTGRES:
             self._postgres(resource, cfg, mapping, gaps, inventory)
         elif kind in (ResourceKind.MYSQL, ResourceKind.MARIADB):
-            self._mariadb(resource, mapping, gaps)
+            self._mariadb(resource, mapping, gaps, inventory)
         elif kind == ResourceKind.OBJECT_BUCKET:
             mapping.target_spec.update(
                 {
@@ -271,7 +271,7 @@ class MappingEngine:
                     )
                 ]
         elif kind == ResourceKind.KUBERNETES_CLUSTER:
-            return self._ske(resource, mapping, gaps)
+            return self._ske(resource, mapping, gaps, inventory)
         return []
 
     def _fitting_machine_types(
@@ -432,12 +432,17 @@ class MappingEngine:
                 "storage_class": cfg.get("storage_class"),
                 "backup_schedule": cfg.get("backup_schedule"),
                 "db_name": props.get("db_name"),
-                "acl": _app_cidrs(resource, inventory),
+                "client_networks": _db_clients(resource, inventory)[0],
+                "kubernetes_clients": _db_clients(resource, inventory)[1],
             }
         )
 
     def _mariadb(
-        self, resource: SourceResource, mapping: TargetMapping, gaps: list[Gap]
+        self,
+        resource: SourceResource,
+        mapping: TargetMapping,
+        gaps: list[Gap],
+        inventory: list[SourceResource],
     ) -> None:
         props = resource.properties
         want = "replica" if props.get("multi_az") else "single"
@@ -461,6 +466,8 @@ class MappingEngine:
                 "version": chosen.get("version"),
                 "source_engine": f"{props.get('engine')} {props.get('engine_version')}",
                 "db_name": props.get("db_name"),
+                "client_networks": _db_clients(resource, inventory)[0],
+                "kubernetes_clients": _db_clients(resource, inventory)[1],
             }
         )
         mapping.needs_review = (
@@ -472,7 +479,11 @@ class MappingEngine:
         )
 
     def _ske(
-        self, resource: SourceResource, mapping: TargetMapping, gaps: list[Gap]
+        self,
+        resource: SourceResource,
+        mapping: TargetMapping,
+        gaps: list[Gap],
+        inventory: list[SourceResource],
     ) -> list[_Pending]:
         props = resource.properties
         version = props.get("kubernetes_version")
@@ -499,6 +510,14 @@ class MappingEngine:
                     suggestion="Check deprecated APIs in manifests/Helm charts before moving workloads.",
                 )
             )
+        node_zones = sorted(
+            {
+                stackit_az(r.properties.get("availability_zone"))
+                for r in inventory
+                if r.kind == ResourceKind.COMPUTE_INSTANCE
+                and r.properties.get("eks_cluster") == resource.name
+            }
+        ) or ["eu01-1"]
         pools: list[dict[str, Any]] = []
         pending: list[_Pending] = []
         for ng in props.get("node_groups", []):
@@ -510,6 +529,7 @@ class MappingEngine:
                 ),
                 "desired": ng.get("desired_size") or ng.get("min_size") or 1,
                 "volume_size": ng.get("disk_size_gib") or 50,
+                "availability_zones": node_zones,
                 "source_instance_types": ng.get("instance_types", []),
             }
             pending += self._machine_type(
@@ -626,21 +646,62 @@ def _root_volume_size(
     return None
 
 
-def _app_cidrs(db: SourceResource, inventory: list[SourceResource]) -> list[str]:
-    """CIDRs of subnets that host compute in the database's VPC (for the ACL)."""
-    subnets = {r.id: r for r in inventory if r.kind == ResourceKind.SUBNET}
-    db_subnets = set(db.properties.get("subnet_ids", []))
-    vpc = next(
-        (subnets[s].properties.get("vpc_id") for s in db_subnets if s in subnets), None
-    )
-    cidrs = {
-        subnets[r.properties["subnet_id"]].properties["cidr_block"]
+def _db_clients(
+    db: SourceResource, inventory: list[SourceResource]
+) -> tuple[list[str], list[str]]:
+    """Who talks to this database: (client subnet ids, kubernetes cluster names).
+
+    Derived from the database's security groups: compute instances whose
+    security group may reach the database port are its clients. Without such
+    rules, every compute instance in the database's VPC counts as a client.
+    Their STACKIT networks become the database ACL.
+    """
+    props = db.properties
+    port = (props.get("endpoint") or {}).get("port")
+    rules_by_sg = {
+        r.id: r.properties.get("rules", [])
         for r in inventory
-        if r.kind == ResourceKind.COMPUTE_INSTANCE
-        and r.properties.get("subnet_id") in subnets
-        and (
-            vpc is None
-            or subnets[r.properties["subnet_id"]].properties.get("vpc_id") == vpc
-        )
+        if r.kind == ResourceKind.SECURITY_GROUP
     }
-    return sorted(cidrs)
+    allowed: set[str] = set()
+    for sg_id in props.get("vpc_security_group_ids", []):
+        for rule in rules_by_sg.get(sg_id, []):
+            source = rule.get("source_security_group")
+            if rule.get("direction") != "ingress" or not source:
+                continue
+            low = rule.get("port_min")
+            high = rule.get("port_max") if rule.get("port_max") is not None else low
+            if port is None or low is None or low <= port <= high:
+                allowed.add(source)
+    compute = [r for r in inventory if r.kind == ResourceKind.COMPUTE_INSTANCE]
+    if allowed:
+        clients = [
+            r
+            for r in compute
+            if allowed & set(r.properties.get("security_group_ids", []))
+        ]
+    else:
+        vpc_of = {
+            r.id: r.properties.get("vpc_id")
+            for r in inventory
+            if r.kind == ResourceKind.SUBNET
+        }
+        vpc = next(
+            (vpc_of[s] for s in props.get("subnet_ids", []) if s in vpc_of), None
+        )
+        clients = [
+            r
+            for r in compute
+            if vpc is None or vpc_of.get(r.properties.get("subnet_id") or "") == vpc
+        ]
+    subnet_ids = sorted(
+        {r.properties["subnet_id"] for r in clients if r.properties.get("subnet_id")}
+    )
+    clusters = sorted(
+        {
+            r.properties["eks_cluster"]
+            for r in clients
+            if r.properties.get("eks_cluster")
+        }
+    )
+    return subnet_ids, clusters

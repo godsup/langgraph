@@ -1,0 +1,65 @@
+{% if m.servers %}
+output "server_private_ips" {
+  description = "Private IPv4 address per migrated server."
+  value = {
+{% for s in m.servers %}
+    {{ s.name | hcl }} = stackit_network_interface.{{ s.tf }}.ipv4
+{% endfor %}
+  }
+}
+{% endif %}
+{% for p in m.postgres %}
+
+output "{{ p.tf }}_host" {
+  description = "PostgreSQL Flex host for {{ p.name }}."
+  value       = stackit_postgresflex_instance.{{ p.tf }}.connection_info.write.host
+}
+
+output "{{ p.tf }}_port" {
+  value = stackit_postgresflex_instance.{{ p.tf }}.connection_info.write.port
+}
+
+output "{{ p.tf }}_password" {
+  value     = stackit_postgresflex_user.{{ p.tf }}.password
+  sensitive = true
+}
+{% endfor %}
+{% for d in m.mariadb %}
+
+output "{{ d.tf }}_host" {
+  value = stackit_mariadb_credential.{{ d.tf }}.host
+}
+
+output "{{ d.tf }}_password" {
+  value     = stackit_mariadb_credential.{{ d.tf }}.password
+  sensitive = true
+}
+{% endfor %}
+{% if m.buckets %}
+
+output "object_storage_access_key" {
+  value     = stackit_objectstorage_credential.migration.access_key
+  sensitive = true
+}
+
+output "object_storage_secret_access_key" {
+  value     = stackit_objectstorage_credential.migration.secret_access_key
+  sensitive = true
+}
+{% endif %}
+{% for lb in m.load_balancers %}
+
+output "{{ lb.tf }}_address" {
+{% if lb.type == "stackit_application_load_balancer" %}
+  value = stackit_application_load_balancer.{{ lb.tf }}.external_address
+{% else %}
+  value = stackit_loadbalancer.{{ lb.tf }}.external_address
+{% endif %}
+}
+{% endfor %}
+{% for c in m.ske_clusters %}
+
+output "{{ c.tf }}_kubernetes_version" {
+  value = stackit_ske_cluster.{{ c.tf }}.kubernetes_version_used
+}
+{% endfor %}

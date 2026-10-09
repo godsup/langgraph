@@ -56,7 +56,7 @@ stackit:
     premium-perf2-stackit: null  # TODO: fill from official price list
   # MariaDB per month, keyed by plan name.
   mariadb_plan_month:
-    stackit-mariadb-1.2.10-single: null  # TODO: fill from official price list
+    stackit-mariadb-1.4.10-single: null  # TODO: fill from official price list
   object_storage_gb_month: null  # TODO: fill from official price list
   # Load balancer per month, keyed by terraform type.
   loadbalancer_month:

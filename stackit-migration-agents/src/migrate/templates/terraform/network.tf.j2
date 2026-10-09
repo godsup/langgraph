@@ -1,0 +1,11 @@
+# One STACKIT network per source subnet. The source VPC itself has no 1:1
+# equivalent (stackit_vpc is experimental and not used).
+{% for n in m.networks %}
+
+resource "stackit_network" "{{ n.tf }}" {
+  project_id  = var.project_id
+  name        = {{ n.name | hcl }}
+  ipv4_prefix = {{ n.ipv4_prefix | hcl }}
+  labels      = merge(var.labels, { "source" = {{ n.name | hcl }} })
+}
+{% endfor %}

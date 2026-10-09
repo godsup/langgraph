@@ -1,0 +1,25 @@
+{% for b in m.buckets %}
+
+{% if b.review %}
+# REVIEW: {{ b.source_name }} needs review (see discovery report).
+{% endif %}
+resource "stackit_objectstorage_bucket" "{{ b.tf }}" {
+  project_id = var.project_id
+  name       = {{ b.name | hcl }}
+}
+{% endfor %}
+{% if m.buckets %}
+
+# Credentials used by the data migration agent (rclone) to write into the
+# buckets. The secret only exists in the Terraform state: protect the state.
+resource "stackit_objectstorage_credentials_group" "migration" {
+  project_id = var.project_id
+  name       = "migration-{{ m.run_id }}"
+  depends_on = [{% for b in m.buckets %}stackit_objectstorage_bucket.{{ b.tf }}{% if not loop.last %}, {% endif %}{% endfor %}]
+}
+
+resource "stackit_objectstorage_credential" "migration" {
+  project_id           = var.project_id
+  credentials_group_id = stackit_objectstorage_credentials_group.migration.credentials_group_id
+}
+{% endif %}

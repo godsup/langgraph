@@ -1,0 +1,170 @@
+{% for lb in m.load_balancers %}
+{% if lb.type == "stackit_application_load_balancer" %}
+
+# {{ lb.name }}: AWS application load balancer -> STACKIT Application Load Balancer (L7).
+{% for note in lb.notes %}
+# REVIEW: {{ note }}
+{% endfor %}
+{% if lb.network_tfs | length > 1 %}
+# REVIEW: targets sit in {{ lb.network_tfs | length }} networks; the first is used for listeners and targets, the others for targets only.
+{% endif %}
+# REVIEW: health check timings are defaults; tune them to the application.
+{% if lb.tls %}
+resource "stackit_alb_certificate" "{{ lb.tf }}" {
+  project_id  = var.project_id
+  name        = "{{ lb.name }}-tls"
+  public_key  = var.{{ lb.tf }}_tls_certificate_pem
+  private_key = var.{{ lb.tf }}_tls_private_key_pem
+}
+
+{% endif %}
+resource "stackit_application_load_balancer" "{{ lb.tf }}" {
+  project_id = var.project_id
+  name       = {{ lb.name | hcl }}
+  plan_id    = "p10"
+  labels     = var.labels
+
+  listeners = [
+{% for li in lb.listeners %}
+    {
+      name     = {{ li.name | hcl }}
+      port     = {{ li.port }}
+      protocol = {{ li.protocol | hcl }}
+      http = {
+        hosts = [
+          {
+            host = "*"
+            rules = [
+              {
+                target_pool = "targets"
+                path = {
+                  prefix = "/"
+                }
+              },
+            ]
+          },
+        ]
+      }
+{% if li.protocol == "PROTOCOL_HTTPS" %}
+      https = {
+        certificate_config = {
+          certificate_ids = [stackit_alb_certificate.{{ lb.tf }}.cert_id]
+        }
+      }
+{% endif %}
+    },
+{% endfor %}
+  ]
+
+  networks = [
+{% for net in lb.network_tfs %}
+    {
+      network_id = stackit_network.{{ net }}.network_id
+      role       = "{{ 'ROLE_LISTENERS_AND_TARGETS' if loop.first else 'ROLE_TARGETS' }}"
+    },
+{% endfor %}
+  ]
+
+  options = {
+    ephemeral_address    = {{ "true" if lb.public else "false" }}
+    private_network_only = {{ "false" if lb.public else "true" }}
+  }
+
+  target_pools = [
+    {
+      name        = "targets"
+      target_port = {{ lb.target_port }}
+      targets = [
+{% for t in lb.targets %}
+        {
+          display_name = {{ t.name | hcl }}
+          ip           = stackit_network_interface.{{ t.server_tf }}.ipv4
+        },
+{% endfor %}
+      ]
+      active_health_check = {
+        healthy_threshold   = 2
+        unhealthy_threshold = 3
+        interval            = "10s"
+        interval_jitter     = "1s"
+        timeout             = "5s"
+        http_health_checks = {
+          ok_status = ["200"]
+          path      = {{ lb.health_path | hcl }}
+        }
+      }
+    },
+  ]
+}
+{% else %}
+
+# {{ lb.name }}: -> STACKIT Network Load Balancer (L4).
+{% for note in lb.notes %}
+# REVIEW: {{ note }}
+{% endfor %}
+{% if lb.public %}
+resource "stackit_public_ip" "{{ lb.tf }}" {
+  project_id = var.project_id
+  labels     = var.labels
+
+  lifecycle {
+    ignore_changes = [network_interface_id]
+  }
+}
+
+{% endif %}
+resource "stackit_loadbalancer" "{{ lb.tf }}" {
+  project_id = var.project_id
+  name       = {{ lb.name | hcl }}
+{% if lb.public %}
+  external_address = stackit_public_ip.{{ lb.tf }}.ip
+{% endif %}
+
+  listeners = [
+{% for li in lb.listeners %}
+    {
+      display_name = {{ li.name | hcl }}
+      port         = {{ li.port }}
+      protocol     = {{ li.protocol | hcl }}
+      target_pool  = "targets"
+    },
+{% endfor %}
+  ]
+
+  networks = [
+{% for net in lb.network_tfs %}
+    {
+      network_id = stackit_network.{{ net }}.network_id
+      role       = "{{ 'ROLE_LISTENERS_AND_TARGETS' if loop.first else 'ROLE_TARGETS' }}"
+    },
+{% endfor %}
+  ]
+
+  target_pools = [
+    {
+      name        = "targets"
+      target_port = {{ lb.target_port }}
+      targets = [
+{% for t in lb.targets %}
+        {
+          display_name = {{ t.name | hcl }}
+          ip           = stackit_network_interface.{{ t.server_tf }}.ipv4
+        },
+{% endfor %}
+      ]
+      active_health_check = {
+        healthy_threshold   = 2
+        unhealthy_threshold = 3
+        interval            = "10s"
+        interval_jitter     = "1s"
+        timeout             = "5s"
+      }
+    },
+  ]
+
+  options = {
+    private_network_only = {{ "false" if lb.public else "true" }}
+  }
+}
+{% endif %}
+{% endfor %}

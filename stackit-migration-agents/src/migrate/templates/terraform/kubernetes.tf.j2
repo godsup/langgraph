@@ -1,0 +1,32 @@
+{% for c in m.ske_clusters %}
+
+# {{ c.source_name }}: EKS -> SKE. Workloads (manifests, Helm releases,
+# secrets, persistent volumes) are not migrated by Terraform.
+{% if c.name != c.source_name %}
+# REVIEW: cluster name shortened to "{{ c.name }}" (SKE names are short; TODO verify the exact limit).
+{% endif %}
+{% if c.review %}
+# REVIEW: Kubernetes version changes from the source; check deprecated APIs first.
+{% endif %}
+resource "stackit_ske_cluster" "{{ c.tf }}" {
+  project_id             = var.project_id
+  name                   = {{ c.name | hcl }}
+{% if c.kubernetes_version_min %}
+  kubernetes_version_min = {{ c.kubernetes_version_min | hcl }}
+{% endif %}
+
+  node_pools = [
+{% for pool in c.node_pools %}
+    {
+      name               = {{ pool.name | hcl }}
+      machine_type       = {{ pool.machine_type | hcl }}
+      minimum            = {{ pool.minimum }}
+      maximum            = {{ pool.maximum }}
+      max_surge          = {{ pool.max_surge }}
+      volume_size        = {{ pool.volume_size }}
+      availability_zones = {{ pool.availability_zones | hcl_list }}
+    },
+{% endfor %}
+  ]
+}
+{% endfor %}

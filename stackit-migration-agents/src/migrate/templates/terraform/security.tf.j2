@@ -1,0 +1,53 @@
+# Security groups attached to migrated servers. AWS security groups are
+# stateful allow-lists; STACKIT security groups are set to stateful too.
+{% for sg in m.security_groups %}
+
+{% for note in sg.notes %}
+# REVIEW: {{ note }}
+{% endfor %}
+resource "stackit_security_group" "{{ sg.tf }}" {
+  project_id  = var.project_id
+  name        = {{ sg.name | hcl }}
+  description = {{ sg.description | hcl }}
+  stateful    = true
+  labels      = var.labels
+}
+{% for r in sg.rules %}
+
+resource "stackit_security_group_rule" "{{ r.tf }}" {
+  project_id        = var.project_id
+  security_group_id = stackit_security_group.{{ sg.tf }}.security_group_id
+  direction         = "{{ r.direction }}"
+  ether_type        = "IPv4"
+{% if r.get("description") %}
+  description       = {{ r.description | hcl }}
+{% endif %}
+{% if r.get("ip_range") %}
+  ip_range          = {{ r.ip_range | hcl }}
+{% endif %}
+{% if r.get("remote_tf") %}
+  remote_security_group_id = stackit_security_group.{{ r.remote_tf }}.security_group_id
+{% endif %}
+{% if r.get("protocol") %}
+
+  protocol = {
+    name = {{ r.protocol | hcl }}
+  }
+{% endif %}
+{% if r.port_min is defined %}
+
+  port_range = {
+    min = {{ r.port_min }}
+    max = {{ r.port_max }}
+  }
+{% endif %}
+{% if r.icmp_type is defined %}
+
+  icmp_parameters = {
+    type = {{ r.icmp_type }}
+    code = {{ r.icmp_code }}
+  }
+{% endif %}
+}
+{% endfor %}
+{% endfor %}

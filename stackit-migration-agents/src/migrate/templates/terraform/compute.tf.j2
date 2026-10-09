@@ -1,0 +1,72 @@
+{% if m.servers %}
+resource "stackit_key_pair" "migration" {
+  name       = "migration-{{ m.run_id }}"
+  public_key = chomp(var.ssh_public_key)
+  labels     = var.labels
+}
+{% for s in m.servers %}
+
+# {{ s.name }}: {{ s.source_type }} -> {{ s.machine_type }}{% if s.decided_by == "llm" %} (ambiguous size, chosen by the LLM: see discovery report){% endif %}
+
+{% if s.review %}
+# REVIEW: mapping needs review, see discovery report.
+{% endif %}
+resource "stackit_network_interface" "{{ s.tf }}" {
+  project_id         = var.project_id
+  network_id         = stackit_network.{{ s.network_tf }}.network_id
+  name               = "{{ s.name }}-nic"
+  security           = true
+  security_group_ids = [{% for sg in s.security_group_tfs %}stackit_security_group.{{ sg }}.security_group_id{% if not loop.last %}, {% endif %}{% endfor %}]
+  labels             = var.labels
+}
+
+resource "stackit_server" "{{ s.tf }}" {
+  project_id         = var.project_id
+  name               = {{ s.name | hcl }}
+  machine_type       = {{ s.machine_type | hcl }}
+  availability_zone  = {{ s.availability_zone | hcl }}
+  keypair_name       = stackit_key_pair.migration.name
+  network_interfaces = [stackit_network_interface.{{ s.tf }}.network_interface_id]
+  labels             = merge(var.labels, { "source" = {{ s.name | hcl }} })
+
+  boot_volume = {
+    size                  = {{ s.boot_volume_gb }}
+    source_type           = "image"
+    source_id             = var.image_id
+    delete_on_termination = true
+  }
+}
+{% if s.public_ip %}
+
+resource "stackit_public_ip" "{{ s.tf }}" {
+  project_id           = var.project_id
+  network_interface_id = stackit_network_interface.{{ s.tf }}.network_interface_id
+  labels               = var.labels
+}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% for v in m.volumes %}
+
+{% if v.review %}
+# REVIEW: choose a STACKIT performance class matching the source volume (see discovery report).
+{% endif %}
+resource "stackit_volume" "{{ v.tf }}" {
+  project_id        = var.project_id
+  name              = {{ v.name | hcl }}
+  availability_zone = {{ v.availability_zone | hcl }}
+  size              = {{ v.size }}
+{% if v.performance_class %}
+  performance_class = {{ v.performance_class | hcl }}
+{% endif %}
+  labels            = var.labels
+}
+{% if v.server_tf %}
+
+resource "stackit_server_volume_attach" "{{ v.tf }}" {
+  project_id = var.project_id
+  server_id  = stackit_server.{{ v.server_tf }}.server_id
+  volume_id  = stackit_volume.{{ v.tf }}.volume_id
+}
+{% endif %}
+{% endfor %}

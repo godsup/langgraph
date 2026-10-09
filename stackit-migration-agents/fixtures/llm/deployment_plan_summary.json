@@ -1,1 +1,15 @@
-{"responses": {"*": "Terraform plan created (milestone 1 skeleton)."}}
+{
+  "responses": {
+    "aws": {
+      "summary": "Terraform will create 39 resources in the target STACKIT project (region eu01) and will not change or delete anything. It builds six networks that mirror the AWS subnets, three security groups, the two web servers and the batch worker with its data volume, a PostgreSQL Flex database with its owner account, a MariaDB instance for the CRM database, three Object Storage buckets plus credentials for the data copy, an Application Load Balancer with a new TLS certificate, and an SKE Kubernetes cluster for the analytics workload. The Windows reporting server and its data volume are deliberately left out. Nothing on AWS is touched. The monthly cost cannot be shown yet because prices are still missing in the pricing configuration.",
+      "risks": [
+        "The load balancer needs a new TLS certificate (ACM certificates cannot be exported), and the HTTP-to-HTTPS redirect must move into the application.",
+        "The CRM database moves from MySQL 8 to MariaDB 10.11, which is not fully compatible: test the CRM application before cutover.",
+        "The analytics cluster is created with Kubernetes 1.30 (source 1.29): check manifests and Helm charts for deprecated APIs.",
+        "Database access is limited by ACLs built from the networks' egress IPs and the SKE egress ranges: verify connectivity right after apply.",
+        "shop-db has three consumers (web, worker, analytics); all connection strings must switch together at cutover.",
+        "Cost impact is unknown until prices are filled in config/pricing.yaml."
+      ]
+    }
+  }
+}

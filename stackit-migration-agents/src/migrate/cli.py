@@ -12,6 +12,7 @@ from typing import Annotated, Any
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
 
 from migrate.config import get_settings
 from migrate.console import RichReporter
@@ -93,6 +94,19 @@ def _show(outcome: Outcome) -> None:
             f"**Artefact:** `{_display_path(Path(artifact)) if artifact else '-'}`",
             f"**SHA-256:** `{gate.get('artifact_sha256')}`",
         ]
+        if gate.get("raw_plan"):
+            console.print(
+                Panel(
+                    gate["raw_plan"],
+                    title="Raw terraform plan (excerpt)",
+                    border_style="dim",
+                    style="dim",
+                )
+            )
+        if gate.get("raw_plan_file"):
+            details.append(
+                f"**Full plan:** `{_display_path(Path(gate['raw_plan_file']))}`"
+            )
         RichReporter(console).panel(
             f"⏸  {gate.get('title', 'Approval required')}",
             body + "\n\n" + "\n\n".join(details),

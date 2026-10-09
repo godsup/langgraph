@@ -1,0 +1,85 @@
+{% set dbs = m.postgres + m.mariadb %}
+{% if dbs %}
+# REVIEW: managed databases are reached over each client network's egress IP
+# (stackit_network.public_ip) and, if present, the SKE egress ranges. Check
+# the ACLs after apply and add admin/VPN ranges via var.extra_db_allowed_cidrs.
+locals {
+{% for db in dbs %}
+  {{ db.tf }}_acl = distinct(concat([for n in [{% for net in db.client_network_tfs %}stackit_network.{{ net }}{% if not loop.last %}, {% endif %}{% endfor %}] : "${n.public_ip}/32" if n.public_ip != null && n.public_ip != ""], {% if db.ske_tfs %}flatten([{% for c in db.ske_tfs %}stackit_ske_cluster.{{ c }}.egress_address_ranges{% if not loop.last %}, {% endif %}{% endfor %}]), {% endif %}var.extra_db_allowed_cidrs))
+{% endfor %}
+{% for p in m.postgres %}
+  {{ p.tf }}_flavors = [for f in data.stackit_postgresflex_flavors.all.flavors : f.id if f.cpu == {{ p.flavor.cpu }} && f.memory == {{ p.flavor.memory_gb }} && lower(f.node_type) == {{ p.flavor.node_type | lower | hcl }}]
+{% endfor %}
+}
+{% endif %}
+{% if m.postgres %}
+
+data "stackit_postgresflex_flavors" "all" {
+  project_id = var.project_id
+}
+{% endif %}
+{% for p in m.postgres %}
+
+# {{ p.name }}: PostgreSQL Flex, flavor {{ p.flavor.id }} ({{ p.flavor.cpu }} CPU / {{ p.flavor.memory_gb }} GiB, {{ p.flavor.node_type }}), looked up by size.
+{% if p.review %}
+# REVIEW: mapping needs review, see discovery report.
+{% endif %}
+resource "stackit_postgresflex_instance" "{{ p.tf }}" {
+  project_id      = var.project_id
+  name            = {{ p.name | hcl }}
+  version         = {{ p.version | hcl }}
+  flavor_id       = one(local.{{ p.tf }}_flavors)
+  backup_schedule = {{ p.backup_schedule | hcl }}
+  retention_days  = 32
+
+  storage = {
+    class = {{ p.storage_class | hcl }}
+    size  = {{ p.storage_gb }}
+  }
+
+  network = {
+    acl = local.{{ p.tf }}_acl
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(local.{{ p.tf }}_flavors) == 1
+      error_message = "No unique PostgreSQL Flex flavor with {{ p.flavor.cpu }} CPU / {{ p.flavor.memory_gb }} GiB ({{ p.flavor.node_type }}). Check `stackit postgresflex flavor list`."
+    }
+  }
+}
+
+resource "stackit_postgresflex_user" "{{ p.tf }}" {
+  project_id  = var.project_id
+  instance_id = stackit_postgresflex_instance.{{ p.tf }}.instance_id
+  username    = {{ p.owner | hcl }}
+  roles       = ["login", "createdb"]
+}
+
+resource "stackit_postgresflex_database" "{{ p.tf }}" {
+  project_id  = var.project_id
+  instance_id = stackit_postgresflex_instance.{{ p.tf }}.instance_id
+  name        = {{ p.db_name | hcl }}
+  owner       = stackit_postgresflex_user.{{ p.tf }}.username
+}
+{% endfor %}
+{% for d in m.mariadb %}
+
+# {{ d.name }}: {{ d.source_engine }} -> STACKIT MariaDB {{ d.version }} (plan {{ d.plan_name }}).
+# REVIEW: MariaDB is not fully MySQL-compatible; confirm the plan size.
+resource "stackit_mariadb_instance" "{{ d.tf }}" {
+  project_id = var.project_id
+  name       = {{ d.name | hcl }}
+  version    = {{ d.version | hcl }}
+  plan_name  = {{ d.plan_name | hcl }}
+
+  parameters = {
+    sgw_acl = join(",", local.{{ d.tf }}_acl)
+  }
+}
+
+resource "stackit_mariadb_credential" "{{ d.tf }}" {
+  project_id  = var.project_id
+  instance_id = stackit_mariadb_instance.{{ d.tf }}.instance_id
+}
+{% endfor %}

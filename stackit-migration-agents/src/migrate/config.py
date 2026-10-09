@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     stackit_region: str = "eu01"
     stackit_service_account_key_path: Path | None = None
     stackit_private_key_path: Path | None = None
+    stackit_image_id: str | None = None  # Linux image UUID for migrated servers
+    ssh_public_key_path: Path | None = None
 
     # --- Deployment: PR mode ---------------------------------------------
     pr_repo: str | None = None  # owner/name of the client's infrastructure repo
@@ -93,6 +95,7 @@ class Settings(BaseSettings):
         "pr_repo",
         "observability_url",
         "stackit_project_id",
+        "stackit_image_id",
         mode="before",
     )
     @classmethod

@@ -1,0 +1,53 @@
+variable "project_id" {
+  description = "STACKIT project ID. The service account must be scoped to this project only."
+  type        = string
+}
+
+variable "region" {
+  description = "STACKIT region."
+  type        = string
+  default     = {{ m.region | hcl }}
+}
+
+variable "labels" {
+  description = "Labels added to every resource."
+  type        = map(string)
+  default = {
+    "managed-by"    = "stackit-migration-agents"
+    "migrated-from" = {{ m.source_cloud | hcl }}
+    "migration-run" = {{ m.run_id | hcl }}
+  }
+}
+{% if m.servers %}
+
+variable "image_id" {
+  description = "UUID of the Linux image for migrated servers (for example Ubuntu 22.04). Find it with `stackit image list`."
+  type        = string
+}
+
+variable "ssh_public_key" {
+  description = "SSH public key installed on migrated servers."
+  type        = string
+}
+{% endif %}
+{% if m.postgres or m.mariadb %}
+
+variable "extra_db_allowed_cidrs" {
+  description = "Additional IPv4 CIDRs allowed to reach the managed databases (admin or VPN ranges)."
+  type        = list(string)
+  default     = []
+}
+{% endif %}
+{% for lb in m.load_balancers if lb.tls %}
+
+variable "{{ lb.tf }}_tls_certificate_pem" {
+  description = "PEM certificate (chain) for {{ lb.name }}. ACM certificates cannot be exported: issue a new one."
+  type        = string
+}
+
+variable "{{ lb.tf }}_tls_private_key_pem" {
+  description = "PEM private key for {{ lb.name }}. Pass via TF_VAR_{{ lb.tf }}_tls_private_key_pem, never commit it."
+  type        = string
+  sensitive   = true
+}
+{% endfor %}

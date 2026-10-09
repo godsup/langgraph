@@ -193,6 +193,9 @@ class DeploymentResult(Model):
     changes: list[PlannedChange] = Field(default_factory=list)
     summary: str = ""  # LLM plain-language summary of the plan
     risks: list[str] = Field(default_factory=list)
+    plan_text_file: str | None = None
+    skipped: list[str] = Field(default_factory=list)  # not rendered, with reason
+    review_items: list[str] = Field(default_factory=list)  # REVIEW notes from rendering
     outputs: dict[str, Any] = Field(default_factory=dict)  # non-sensitive tf outputs
     pr_url: str | None = None
     finished_at: datetime | None = None
