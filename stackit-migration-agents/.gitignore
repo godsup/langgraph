@@ -1,0 +1,22 @@
+# Secrets
+.env
+*.pem
+*-key.json
+credentials.json
+
+# Run artefacts (plans, audit logs, terraform state, checkpoints)
+runs/
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfplan
+tfplan
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
