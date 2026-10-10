@@ -35,6 +35,7 @@ from migrate.agents.common import (
     mutations_allowed,
     request_approval,
 )
+from migrate.approval import PLAN_FILE
 from migrate.context import AppContext
 from migrate.runs import write_atomic
 from migrate.state import (
@@ -206,7 +207,7 @@ async def gate(state: MigrationState, runtime: Runtime[AppContext]) -> dict[str,
         ctx,
         plan,
         gate=Gate.DEPLOYMENT,
-        artifact=Path(plan.deployment.plan_file or ""),
+        artifact=ctx.paths.terraform_dir,
         agent=AGENT,
     )
     plan.deployment.status = DeploymentStatus.AWAITING_APPROVAL
@@ -235,7 +236,7 @@ async def await_approval_node(
         payload={
             "title": f"Approve deployment: {action} ({plan.deployment.mode.value} mode)",
             "summary": _summary_markdown(plan),
-            "artifact": plan.deployment.plan_file,
+            "artifact": plan.deployment.terraform_dir,
             "raw_plan": _raw_plan(plan),
             "raw_plan_file": plan.deployment.plan_text_file,
             "mode": plan.deployment.mode.value,
@@ -263,41 +264,52 @@ async def execute(
 ) -> dict[str, Any]:
     ctx = runtime.context
     plan = load_plan(state)
-    plan_file = Path(plan.deployment.plan_file or "")
-    workdir = plan.deployment.terraform_dir
+    tf_dir = ctx.paths.terraform_dir
     apply_mode = plan.deployment.mode == DeployMode.APPLY
-    # The token is issued only for the exact plan file that was approved.
-    token = approval_token(
-        ctx,
-        plan,
-        gate=Gate.DEPLOYMENT,
-        action="terraform.apply" if apply_mode else "terraform.pr",
-        artifact=plan_file,
-    )
-    async with ctx.mcp.toolbox("stackit", agent=AGENT) as tools:
-        if apply_mode:
-            ctx.reporter.step(
-                AGENT,
-                "terraform apply (approved plan file)"
-                + (" [simulated]" if ctx.mock else ""),
-            )
-            result = await tools.call(
-                "terraform_apply",
-                mutating=True,
-                workdir=workdir,
-                plan_file=plan_file.name,
-                approval_token=token,
-            )
-        else:
-            result = await tools.call(
-                "open_pull_request",
-                mutating=True,
-                workdir=workdir,
-                plan_file=plan_file.name,
-                approval_token=token,
-                title=f"STACKIT migration {plan.run_id}: target infrastructure",
-                body=ctx.audit.redactor.text(_pr_body(plan)),
-            )
+    try:
+        # Issued only for the exact Terraform bundle (plan, code, inputs) that
+        # was approved; the MCP server re-checks it on its own copy.
+        token = approval_token(
+            ctx,
+            plan,
+            gate=Gate.DEPLOYMENT,
+            action="terraform.apply" if apply_mode else "terraform.pr",
+            artifact=tf_dir,
+        )
+        async with ctx.mcp.toolbox("stackit", agent=AGENT) as tools:
+            if apply_mode:
+                ctx.reporter.step(
+                    AGENT,
+                    "terraform apply (approved plan file)"
+                    + (" [simulated]" if ctx.mock else ""),
+                )
+                result = await tools.call(
+                    "terraform_apply",
+                    mutating=True,
+                    workdir=str(tf_dir),
+                    plan_file=PLAN_FILE,
+                    approval_token=token,
+                )
+            else:
+                result = await tools.call(
+                    "open_pull_request",
+                    mutating=True,
+                    workdir=str(tf_dir),
+                    plan_file=PLAN_FILE,
+                    approval_token=token,
+                    title=f"STACKIT migration {plan.run_id}: target infrastructure",
+                    body=ctx.audit.redactor.text(_pr_body(plan)),
+                )
+    except Exception as exc:  # record and stop; the next `deploy` re-plans
+        plan.deployment.status = DeploymentStatus.FAILED
+        plan.deployment.error = str(exc)[:2000]
+        return halt(
+            ctx,
+            plan,
+            AGENT,
+            f"Deployment failed: {plan.deployment.error[:300]}. "
+            "Run `migrate deploy` again to re-plan and request a new approval.",
+        )
     if apply_mode:
         plan.deployment.outputs = result.get("outputs", {})
         plan.deployment.status = DeploymentStatus.APPLIED

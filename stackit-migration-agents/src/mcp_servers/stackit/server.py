@@ -17,6 +17,9 @@ import json
 import os
 import re
 import shutil
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -32,14 +35,13 @@ from mcp_servers.common import (
     server_audit,
 )
 from mcp_servers.stackit.catalog import live_catalog
-from migrate.approval import sha256_file
+from migrate.approval import PLAN_FILE, sha256_file, sha256_bundle, terraform_bundle
 from migrate.proc import run
 
 mcp = make_server(
     "stackit", "Terraform and STACKIT CLI. Mutations need an approval token."
 )
 _cli_env: dict[str, str] = {}
-PLAN_FILE = "tfplan"
 PLAN_TEXT = "plan.txt"
 TFVARS = "terraform.tfvars.json"
 
@@ -273,115 +275,94 @@ def terraform_plan(workdir: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------
 
 
-@mcp.tool()
-def terraform_apply(
-    workdir: str, plan_file: str, approval_token: str
-) -> dict[str, Any]:
-    """Apply the saved, approved plan file. Refuses without a valid approval token."""
-    tf_dir = _tf_dir(workdir)
-    plan_path = path_inside(tf_dir, plan_file)
-    require_approval(
-        approval_token, action="terraform.apply", artifact_sha256=sha256_file(plan_path)
-    )
-    inputs = {
-        "workdir": str(tf_dir),
-        "plan_file": str(plan_path),
-        "plan_sha256": sha256_file(plan_path),
-    }
-    _audit("terraform_apply", inputs, "before", status="started")
+@contextmanager
+def _staged_bundle(tf_dir: Path, plan_file: str) -> Iterator[tuple[Path, str]]:
+    """Copy the deliverable to a private directory and hash the copy.
+
+    The approval token is checked against the copy, and only the copy is
+    applied or shipped: files changed after the check cannot slip through.
+    """
+    if plan_file != PLAN_FILE:
+        raise PermissionError(f"only the saved plan file {PLAN_FILE!r} of this directory can be used")
+    staging = Path(tempfile.mkdtemp(prefix=".approved-", dir=tf_dir.parent))
     try:
-        if is_mock():
-            changes = json.loads(plan_path.read_text(encoding="utf-8"))["changes"]
-            output = "\n".join(f"{c['address']}: Creation complete" for c in changes)
-            output += f"\n\nApply complete! Resources: {len(changes)} added, 0 changed, 0 destroyed."
-            outputs: dict[str, Any] = {
-                "note": "simulated apply, no resources were created"
-            }
-        else:
-            output = _terraform(
-                tf_dir, "apply", "-input=false", "-no-color", plan_path.name
-            )
-            raw = json.loads(_terraform(tf_dir, "output", "-json"))
-            # Never return sensitive outputs (passwords, keys) to the agent.
-            outputs = {
-                k: v.get("value") for k, v in raw.items() if not v.get("sensitive")
-            }
-    except Exception as exc:
-        _audit(
-            "terraform_apply",
-            inputs,
-            "after",
-            status="error",
-            result={"error": str(exc)[:1000]},
-        )
-        raise
-    result = {
-        "applied": True,
-        "simulated": is_mock(),
-        "output": output[-6000:],
-        "outputs": outputs,
-    }
-    _audit(
-        "terraform_apply",
-        inputs,
-        "after",
-        result={"applied": True, "simulated": is_mock()},
-    )
+        for path in terraform_bundle(tf_dir):
+            shutil.copyfile(path, staging / path.name)
+        if not (staging / PLAN_FILE).is_file():
+            raise FileNotFoundError("no saved plan file: run terraform_plan first")
+        yield staging, sha256_bundle(staging)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+
+@mcp.tool()
+def terraform_apply(workdir: str, plan_file: str, approval_token: str) -> dict[str, Any]:
+    """Apply the saved, approved plan. Refuses without a valid approval token
+    for exactly this Terraform bundle (plan + code + inputs)."""
+    tf_dir = _tf_dir(workdir)
+    with _staged_bundle(tf_dir, plan_file) as (staged, bundle_sha):
+        require_approval(approval_token, action="terraform.apply", artifact_sha256=bundle_sha)
+        inputs = {"workdir": str(tf_dir), "plan_file": PLAN_FILE, "bundle_sha256": bundle_sha}
+        _audit("terraform_apply", inputs, "before", status="started")
+        try:
+            if is_mock():
+                changes = json.loads((staged / PLAN_FILE).read_text(encoding="utf-8"))["changes"]
+                output = "\n".join(f"{c['address']}: Creation complete" for c in changes)
+                output += f"\n\nApply complete! Resources: {len(changes)} added, 0 changed, 0 destroyed."
+                outputs: dict[str, Any] = {"note": "simulated apply, no resources were created"}
+            else:
+                output = _terraform(tf_dir, "apply", "-input=false", "-no-color", str(staged / PLAN_FILE))
+                raw = json.loads(_terraform(tf_dir, "output", "-json"))
+                # Never return sensitive outputs (passwords, keys) to the agent.
+                outputs = {k: v.get("value") for k, v in raw.items() if not v.get("sensitive")}
+        except Exception as exc:
+            _audit("terraform_apply", inputs, "after", status="error", result={"error": str(exc)[:1000]})
+            raise
+    result = {"applied": True, "simulated": is_mock(), "output": output[-6000:], "outputs": outputs}
+    _audit("terraform_apply", inputs, "after", result={"applied": True, "simulated": is_mock()})
     return result
-
-
-_COPY_SUFFIXES = {".tf", ".md", ".json"}
 
 
 @mcp.tool()
 def open_pull_request(
     workdir: str, plan_file: str, title: str, body: str, approval_token: str
 ) -> dict[str, Any]:
-    """Push the generated Terraform to a branch of the client's infrastructure
+    """Push the approved Terraform to a branch of the client's infrastructure
     repository and open a pull request with `gh`. The client's pipeline applies
-    it after review. Refuses without a valid approval token."""
+    it after review. Refuses without a valid approval token for exactly this
+    Terraform bundle; only the verified copy is pushed."""
     tf_dir = _tf_dir(workdir)
-    plan_path = path_inside(tf_dir, plan_file)
-    require_approval(
-        approval_token, action="terraform.pr", artifact_sha256=sha256_file(plan_path)
-    )
     repo = os.environ.get("PR_REPO") or "example-org/infrastructure"
     branch = f"migrate/{safe_name(run_id(), 'run id')}"
-    inputs = {"repo": repo, "branch": branch, "title": title}
-    _audit("open_pull_request", inputs, "before", status="started")
-    try:
-        if is_mock():
-            result = {
-                "simulated": True,
-                "pr_url": f"https://github.com/{repo}/pull/42",
-                "branch": branch,
-                "files": sorted(
-                    p.name for p in tf_dir.iterdir() if p.suffix in _COPY_SUFFIXES
-                ),
-            }
-        else:
-            result = _push_and_open_pr(tf_dir, repo, branch, title, body)
-    except Exception as exc:
-        _audit(
-            "open_pull_request",
-            inputs,
-            "after",
-            status="error",
-            result={"error": str(exc)[:1000]},
-        )
-        raise
+    with _staged_bundle(tf_dir, plan_file) as (staged, bundle_sha):
+        require_approval(approval_token, action="terraform.pr", artifact_sha256=bundle_sha)
+        # The binary plan stays local; code, README and non-secret inputs ship.
+        shipped = [p for p in sorted(staged.iterdir()) if p.name != PLAN_FILE]
+        inputs = {"repo": repo, "branch": branch, "title": title, "bundle_sha256": bundle_sha}
+        _audit("open_pull_request", inputs, "before", status="started")
+        try:
+            if is_mock():
+                result = {
+                    "simulated": True,
+                    "pr_url": f"https://github.com/{repo}/pull/42",
+                    "branch": branch,
+                    "files": [p.name for p in shipped],
+                }
+            else:
+                result = _push_and_open_pr(shipped, repo, branch, title, body)
+        except Exception as exc:
+            _audit("open_pull_request", inputs, "after", status="error", result={"error": str(exc)[:1000]})
+            raise
     _audit("open_pull_request", inputs, "after", result=result)
     return result
 
 
 def _push_and_open_pr(
-    tf_dir: Path, repo: str, branch: str, title: str, body: str
+    files: list[Path], repo: str, branch: str, title: str, body: str
 ) -> dict[str, Any]:
     clone = os.environ.get("PR_REPO_PATH")
     if not os.environ.get("PR_REPO") or not clone:
-        raise RuntimeError(
-            "PR mode needs PR_REPO (owner/name) and PR_REPO_PATH (local clone)"
-        )
+        raise RuntimeError("PR mode needs PR_REPO (owner/name) and PR_REPO_PATH (local clone)")
     repo_dir = Path(clone).resolve()
     base = os.environ.get("PR_BASE_BRANCH", "main")
     target = repo_dir / "migrations" / run_id()
@@ -389,37 +370,17 @@ def _push_and_open_pr(
     run([*git, "fetch", "origin", base])
     run([*git, "checkout", "-B", branch, f"origin/{base}"])
     target.mkdir(parents=True, exist_ok=True)
-    copied = []
-    for path in sorted(tf_dir.iterdir()):
-        # Code, README and non-secret inputs only: never state, plans or caches.
-        if path.is_file() and path.suffix in _COPY_SUFFIXES:
-            shutil.copy2(path, target / path.name)
-            copied.append(path.name)
+    for path in files:
+        shutil.copyfile(path, target / path.name)
     run([*git, "add", str(target)])
     run([*git, "commit", "-m", title])
     run([*git, "push", "-u", "origin", branch])
     out = run(
-        [
-            "gh",
-            "pr",
-            "create",
-            "--repo",
-            repo,
-            "--base",
-            base,
-            "--head",
-            branch,
-            "--title",
-            title,
-            "--body",
-            body,
-        ],
+        ["gh", "pr", "create", "--repo", repo, "--base", base, "--head", branch, "--title", title, "--body", body],
         cwd=repo_dir,
     ).stdout
-    url = next(
-        (ln for ln in out.splitlines() if ln.startswith("https://")), out.strip()
-    )
-    return {"simulated": False, "pr_url": url, "branch": branch, "files": copied}
+    url = next((ln for ln in out.splitlines() if ln.startswith("https://")), out.strip())
+    return {"simulated": False, "pr_url": url, "branch": branch, "files": [p.name for p in files]}
 
 
 def main() -> None:

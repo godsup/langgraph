@@ -10,7 +10,7 @@ from langgraph.runtime import Runtime
 from langgraph.types import interrupt
 from pydantic import BaseModel
 
-from migrate.approval import sha256_file
+from migrate.approval import sha256_artifact
 from migrate.context import AppContext
 from migrate.runs import save_plan
 from migrate.state import (
@@ -79,7 +79,7 @@ def request_approval(
     ctx: AppContext, plan: MigrationPlan, *, gate: Gate, artifact: Path, agent: str
 ) -> None:
     """Record a pending approval for the exact artefact on disk."""
-    record = ApprovalRecord(gate=gate, artifact_sha256=sha256_file(artifact))
+    record = ApprovalRecord(gate=gate, artifact_sha256=sha256_artifact(artifact))
     plan.approvals.append(record)
     ctx.audit.record(
         agent=agent,
@@ -129,7 +129,7 @@ def approval_token(
     record = plan.latest_approval(gate)
     if record is None or record.decision != ApprovalDecision.APPROVED:
         raise PermissionError(f"{gate.value} gate is not approved")
-    current = sha256_file(artifact)
+    current = sha256_artifact(artifact)
     if current != record.artifact_sha256:
         raise PermissionError(
             f"{artifact.name} changed after it was approved; re-plan and approve again"

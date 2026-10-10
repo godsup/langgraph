@@ -40,6 +40,37 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+# A Terraform deliverable = saved plan + code + non-secret inputs. Approvals
+# bind to all of it, so editing a .tf file after approval is refused too.
+PLAN_FILE = "tfplan"
+BUNDLE_SUFFIXES = (".tf", ".md", ".json")
+
+
+def terraform_bundle(tf_dir: Path) -> list[Path]:
+    """Files of the Terraform deliverable in `tf_dir`, sorted by name."""
+    files = []
+    for path in sorted(tf_dir.iterdir()):
+        if not (path.suffix in BUNDLE_SUFFIXES or path.name == PLAN_FILE):
+            continue
+        if path.is_symlink():
+            raise ApprovalError(f"refusing symlink in the Terraform directory: {path.name}")
+        if path.is_file():
+            files.append(path)
+    return files
+
+
+def sha256_bundle(tf_dir: Path) -> str:
+    digest = hashlib.sha256()
+    for path in terraform_bundle(tf_dir):
+        digest.update(f"{path.name}\0{sha256_file(path)}\n".encode())
+    return digest.hexdigest()
+
+
+def sha256_artifact(path: Path) -> str:
+    """Hash of an approvable artefact: a file, or a Terraform directory bundle."""
+    return sha256_bundle(path) if path.is_dir() else sha256_file(path)
+
+
 def new_secret() -> str:
     return secrets.token_urlsafe(32)
 

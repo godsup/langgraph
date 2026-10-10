@@ -1,7 +1,9 @@
 """Run external CLIs (terraform, stackit, rclone, pg_*, gh) safely.
 
 Always an argument list, never a shell string, never `shell=True`. Output is
-captured and size-limited so a chatty tool cannot flood logs.
+captured; by default it is size-limited so a chatty tool cannot flood logs.
+Callers that parse output as data pass `max_output=None`, because a cut-off
+listing or schema would silently corrupt verification.
 """
 
 from __future__ import annotations
@@ -51,6 +53,7 @@ def run(
     timeout: float = 1800,
     check: bool = True,
     stdin: str | None = None,
+    max_output: int | None = MAX_OUTPUT,
 ) -> Result:
     if isinstance(args, str):  # defensive: never accept a shell string
         raise TypeError("args must be a sequence of strings, not a string")
@@ -68,7 +71,7 @@ def run(
     result = Result(
         args=[args[0], *argv[1:]],
         returncode=completed.returncode,
-        stdout=completed.stdout[-MAX_OUTPUT:],
+        stdout=completed.stdout if max_output is None else completed.stdout[-max_output:],
         stderr=completed.stderr[-MAX_OUTPUT:],
     )
     if check and completed.returncode != 0:

@@ -156,10 +156,20 @@ async def verify(state: MigrationState, runtime: Runtime[AppContext]) -> dict[st
                 continue
             if task.status != TransferStatus.COPIED:
                 continue
-            if task.kind == TransferKind.OBJECT_STORAGE:
-                checks += await _verify_bucket(tools, task, sample_size)
-            else:
-                checks += await _verify_postgres(ctx, tools, task)
+            try:
+                if task.kind == TransferKind.OBJECT_STORAGE:
+                    checks += await _verify_bucket(tools, task, sample_size)
+                else:
+                    checks += await _verify_postgres(ctx, tools, task)
+            except Exception as exc:  # a check that cannot run is a failed check
+                checks.append(
+                    VerificationCheck(
+                        task_id=task.id,
+                        name="verification_error",
+                        passed=False,
+                        details=f"{type(exc).__name__}: {str(exc)[:300]}",
+                    )
+                )
     plan.data_migration.checks = checks
     failed = [c for c in checks if not c.passed]
     plan.data_migration.status = (
@@ -211,7 +221,8 @@ async def report(state: MigrationState, runtime: Runtime[AppContext]) -> dict[st
     dm.summary = await ctx.llm.write(
         agent=AGENT,
         task="data_verification_summary",
-        key="passed" if dm.status == CutoverStatus.VERIFIED else "failed",
+        key=f"{plan.source_cloud.value}:"
+        + ("passed" if dm.status == CutoverStatus.VERIFIED else "failed"),
         system=(
             "You summarise data migration verification results for the person approving the cutover. "
             "3-5 sentences, factual, only use the facts given. Mention anything not migrated."
@@ -305,21 +316,31 @@ async def cutover(
     ctx = runtime.context
     plan = load_plan(state)
     report_file = ctx.paths.verification_report
-    token = approval_token(
-        ctx, plan, gate=Gate.CUTOVER, action="data.cutover", artifact=report_file
-    )
     buckets = [
         {"source": t.source, "target": t.target}
         for t in plan.data_migration.tasks
         if t.kind == TransferKind.OBJECT_STORAGE and t.status == TransferStatus.COPIED
     ]
-    async with ctx.mcp.toolbox("datamove", agent=AGENT) as tools:
-        result = await tools.call(
-            "cutover",
-            mutating=True,
-            report_path=str(report_file),
-            approval_token=token,
-            buckets=buckets,
+    try:
+        token = approval_token(
+            ctx, plan, gate=Gate.CUTOVER, action="data.cutover", artifact=report_file
+        )
+        async with ctx.mcp.toolbox("datamove", agent=AGENT) as tools:
+            result = await tools.call(
+                "cutover",
+                mutating=True,
+                report_path=str(report_file),
+                approval_token=token,
+                buckets=buckets,
+            )
+    except Exception as exc:  # record and stop; the next `data` re-verifies
+        plan.data_migration.status = CutoverStatus.FAILED
+        return halt(
+            ctx,
+            plan,
+            AGENT,
+            f"Cutover failed: {str(exc)[:300]}. Run `migrate data` again to re-verify "
+            "and request a new approval.",
         )
     plan.data_migration.status = CutoverStatus.CUT_OVER
     plan.data_migration.finished_at = utcnow()
