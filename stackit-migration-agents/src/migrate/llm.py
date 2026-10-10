@@ -18,13 +18,19 @@ stay mocked.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
 
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
@@ -111,7 +117,11 @@ class RecordedChatModel(BaseChatModel):
         return self
 
     def _generate(
-        self, messages: list[BaseMessage], stop: list[str] | None = None, **kwargs: Any
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: Any = None,
+        **kwargs: Any,
     ) -> ChatResult:
         if self.cursor >= len(self.responses):
             message = AIMessage(content="(no further recorded responses)")
@@ -254,9 +264,7 @@ class LLMGateway:
                 message = await self._live_model().ainvoke(
                     self._messages(system, prompt)
                 )
-                text = (
-                    message.text if hasattr(message, "text") else str(message.content)
-                )
+                text = str(message.text)
         except Exception as exc:
             if fallback is None:
                 self.audit.record(
@@ -284,3 +292,77 @@ class LLMGateway:
         if self.recorded:
             return RecordedChatModel(responses=list(self.recorded.get(task, key)))
         return self._live_model()
+
+    async def investigate(
+        self,
+        *,
+        agent: str,
+        task: str,
+        key: str,
+        system: str,
+        prompt: str,
+        tools: Sequence[BaseTool],
+        execute: Callable[[str, dict[str, Any]], Awaitable[Any]],
+        max_steps: int = 4,
+        fallback: str,
+    ) -> str:
+        """Let the LLM call read-only tools before it writes its answer.
+
+        `tools` only describe the allowed tools to the model; every call is
+        executed by `execute` (the audited MCP tool box), and names outside the
+        allowed set are refused. The final answer is requested from the model
+        without tools, so an empty `tools` list is never sent.
+        """
+        allowed = {tool.name for tool in tools}
+        inputs = {
+            "task": task,
+            "key": key,
+            "mode": self.mode,
+            "prompt": prompt,
+            "tools": sorted(allowed),
+        }
+        try:
+            model = self.chat_model(task=task, key=key)
+            bound = bind_tools_if_any(model, tools)
+            messages: list[BaseMessage] = self._messages(system, prompt)
+            answer: BaseMessage | None = None
+            for _ in range(max_steps):
+                answer = await bound.ainvoke(messages)
+                messages.append(answer)
+                calls = getattr(answer, "tool_calls", None) or []
+                if not calls:
+                    break
+                for call in calls:
+                    if call["name"] in allowed:
+                        try:
+                            result: Any = await execute(
+                                call["name"], dict(call.get("args") or {})
+                            )
+                        except Exception as exc:  # report tool errors back to the model
+                            result = {"error": str(exc)[:500]}
+                    else:
+                        result = {"error": f"tool {call['name']!r} is not allowed"}
+                    content = self.redactor.text(json.dumps(result, default=str))[:4000]
+                    messages.append(
+                        ToolMessage(
+                            content=content, tool_call_id=call.get("id") or call["name"]
+                        )
+                    )
+                answer = None
+            if answer is None:  # tool budget used up: ask for the answer without tools
+                answer = await model.ainvoke(messages)
+            text = str(answer.text)
+        except Exception as exc:  # noqa: BLE001 - triage must not break monitoring
+            self.audit.record(
+                agent=agent,
+                action="llm.investigate",
+                inputs=inputs,
+                status="fallback",
+                result={"error": f"{type(exc).__name__}: {exc}"},
+            )
+            return fallback
+        text = self.redactor.text(text.strip()) or fallback
+        self.audit.record(
+            agent=agent, action="llm.investigate", inputs=inputs, result=text
+        )
+        return text

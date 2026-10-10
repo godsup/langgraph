@@ -1,0 +1,59 @@
+# Monitoring rules evaluated by the monitoring agent (read-only, never remediates).
+#
+# Each rule is an instant PromQL query against the STACKIT Observability
+# instance (Prometheus-compatible API) plus a threshold. Every returned series
+# is compared with `operator` / `threshold`; matching series are anomalies.
+#
+# TODO(verify): metric names depend on the exporters scraped in your
+# Observability instance (node_exporter on servers, postgres_exporter or the
+# managed-service metrics, your application's HTTP metrics). Adjust the
+# queries; no code changes are needed.
+version: 1
+rules:
+  - name: cpu_high
+    description: CPU utilisation above 85 % (5 min average)
+    severity: warning
+    query: 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])))
+    operator: ">"
+    threshold: 85
+    unit: "%"
+
+  - name: memory_high
+    description: Memory utilisation above 90 %
+    severity: warning
+    query: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+    operator: ">"
+    threshold: 90
+    unit: "%"
+
+  - name: disk_full
+    description: Filesystem more than 85 % full
+    severity: critical
+    query: 100 * (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"})
+    operator: ">"
+    threshold: 85
+    unit: "%"
+
+  - name: db_connections_high
+    description: Database connections above 80 % of max_connections
+    severity: warning
+    query: 100 * sum by (instance) (pg_stat_database_numbackends) / max by (instance) (pg_settings_max_connections)
+    operator: ">"
+    threshold: 80
+    unit: "%"
+
+  - name: http_error_rate_high
+    description: More than 5 % of HTTP requests fail with 5xx
+    severity: critical
+    query: 100 * sum by (job) (rate(http_requests_total{code=~"5.."}[5m])) / sum by (job) (rate(http_requests_total[5m]))
+    operator: ">"
+    threshold: 5
+    unit: "%"
+
+  - name: target_down
+    description: A scrape target is down
+    severity: critical
+    query: up
+    operator: "=="
+    threshold: 0
+    unit: ""

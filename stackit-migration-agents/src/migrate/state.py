@@ -278,11 +278,26 @@ class Anomaly(Model):
     triage: str = ""  # LLM summary with proposed fix (never auto-applied)
 
 
+class RuleEvaluation(Model):
+    rule: str
+    description: str
+    severity: str
+    threshold: float
+    operator: str
+    unit: str = ""
+    series: int = 0
+    worst: float | None = None
+    breaches: int = 0
+    error: str | None = None
+
+
 class MonitoringResult(Model):
     polls: int = 0
     last_poll_at: datetime | None = None
-    anomalies: list[Anomaly] = Field(default_factory=list)
+    last_evaluations: list[RuleEvaluation] = Field(default_factory=list)
+    anomalies: list[Anomaly] = Field(default_factory=list)  # most recent first, capped
     report_path: str | None = None
+    notifications_sent: int = 0
 
 
 # --------------------------------------------------------------------------

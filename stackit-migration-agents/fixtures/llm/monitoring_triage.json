@@ -1,0 +1,45 @@
+{
+  "responses": {
+    "cpu_high": [
+      {
+        "content": "",
+        "tool_calls": [
+          {
+            "name": "query_range",
+            "id": "call_cpu_1",
+            "args": {
+              "query": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=\"shop-worker-1\"}[5m])))",
+              "minutes": 60,
+              "step_seconds": 300
+            }
+          }
+        ]
+      },
+      {
+        "content": "- **What:** shop-worker-1 is at 93 % CPU. The last hour shows about 20 % until 02:00 UTC and a jump to 93 % at 02:00, the start of the nightly export window (tag `Schedule: cron: nightly exports 02:00`).\n- **Likely cause:** the nightly export job. The worker runs on c2i.4 with the same 4 vCPUs as on AWS, so this matches the expected batch pattern rather than a migration problem.\n- **Proposed fix (not applied):** none needed if the export finishes on time. If it runs into business hours, change `machine_type` to the next size in the Terraform, re-plan and approve, or lower the export parallelism.\n- **Urgency:** low, unless high CPU persists outside the export window."
+      }
+    ],
+    "db_connections_high": [
+      {
+        "content": "",
+        "tool_calls": [
+          {
+            "name": "query_promql",
+            "id": "call_db_1",
+            "args": {
+              "query": "sum by (datname) (pg_stat_database_numbackends{instance=\"shop-db\"})"
+            }
+          }
+        ]
+      },
+      {
+        "content": "- **What:** shop-db (PostgreSQL Flex) uses 86 % of its connection limit; 172 connections belong to the `shop` database.\n- **Likely cause:** after the cutover all consumers (web tier, batch worker and the analytics cluster) connect to the new instance, with connection pools sized for the AWS setup.\n- **Proposed fix (not applied):** reduce pool sizes in the analytics workloads or put a connection pooler (PgBouncer) in front; if the load is legitimate, choose a larger PostgreSQL Flex flavor in the Terraform and re-plan.\n- **Urgency:** medium: new connections are refused once the limit is reached."
+      }
+    ],
+    "*": [
+      {
+        "content": "No recorded triage for this rule. Check the metric manually; nothing was changed automatically."
+      }
+    ]
+  }
+}

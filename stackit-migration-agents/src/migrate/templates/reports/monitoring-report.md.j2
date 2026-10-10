@@ -1,0 +1,42 @@
+# Monitoring report: STACKIT {{ plan.target_region }}
+
+| | |
+|---|---|
+| Run | `{{ plan.run_id }}` |
+| Last poll | {{ mon.last_poll_at.strftime("%Y-%m-%d %H:%M:%S UTC") if mon.last_poll_at else "-" }} (poll #{{ mon.polls }}) |
+| Current anomalies | {{ current | length }} |
+{% if plan.mock %}
+| Mode | **MOCK**: recorded metrics |
+{% endif %}
+
+The monitoring agent is read-only. Proposed fixes are suggestions for a human;
+**nothing is changed automatically**.
+
+## Rules (last poll)
+
+| Rule | Description | Severity | Series | Worst | Threshold | Status |
+|---|---|---|---:|---:|---|---|
+{% for e in mon.last_evaluations %}
+| `{{ e.rule }}` | {{ e.description | cell }} | {{ e.severity }} | {{ e.series }} | {{ "-" if e.worst is none else "{:g}{}".format(e.worst, e.unit) }} | {{ e.operator }} {{ "{:g}".format(e.threshold) }}{{ e.unit }} | {{ "⚠️ " ~ (e.error | cell) if e.error else ("🔴 " ~ e.breaches ~ " breach(es)" if e.breaches else "🟢 ok") }} |
+{% endfor %}
+
+## Current anomalies and triage
+
+{% if not current %}
+No anomalies in the last poll.
+{% endif %}
+{% for a in current %}
+### {{ a.rule }} · {{ a.labels.items() | map("join", "=") | join(", ") }}
+
+Value **{{ "{:g}".format(a.value) }}** (threshold {{ "{:g}".format(a.threshold) }}), severity {{ a.severity }}.
+
+{{ a.triage }}
+
+{% endfor %}
+## History (most recent first)
+
+| Detected | Rule | Target | Value |
+|---|---|---|---:|
+{% for a in mon.anomalies %}
+| {{ a.detected_at.strftime("%Y-%m-%d %H:%M") }} | `{{ a.rule }}` | {{ a.labels.items() | map("join", "=") | join(", ") | cell }} | {{ "{:g}".format(a.value) }} |
+{% endfor %}

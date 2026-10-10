@@ -1,0 +1,263 @@
+{
+ "_note": "Mock metrics after cutover (fictional). Keys are whitespace-normalised PromQL queries.",
+ "instant": {
+  "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])))": [
+   {
+    "metric": {
+     "instance": "shop-web-1"
+    },
+    "value": [
+     1760062200,
+     "41.2"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-web-2"
+    },
+    "value": [
+     1760062200,
+     "38.7"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-worker-1"
+    },
+    "value": [
+     1760062200,
+     "93.4"
+    ]
+   }
+  ],
+  "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)": [
+   {
+    "metric": {
+     "instance": "shop-web-1"
+    },
+    "value": [
+     1760062200,
+     "62.1"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-web-2"
+    },
+    "value": [
+     1760062200,
+     "59.8"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-worker-1"
+    },
+    "value": [
+     1760062200,
+     "71.0"
+    ]
+   }
+  ],
+  "100 * (1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"})": [
+   {
+    "metric": {
+     "instance": "shop-web-1",
+     "mountpoint": "/"
+    },
+    "value": [
+     1760062200,
+     "34.5"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-worker-1",
+     "mountpoint": "/"
+    },
+    "value": [
+     1760062200,
+     "41.0"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-worker-1",
+     "mountpoint": "/data"
+    },
+    "value": [
+     1760062200,
+     "78.2"
+    ]
+   }
+  ],
+  "100 * sum by (instance) (pg_stat_database_numbackends) / max by (instance) (pg_settings_max_connections)": [
+   {
+    "metric": {
+     "instance": "shop-db"
+    },
+    "value": [
+     1760062200,
+     "86.0"
+    ]
+   }
+  ],
+  "100 * sum by (job) (rate(http_requests_total{code=~\"5..\"}[5m])) / sum by (job) (rate(http_requests_total[5m]))": [
+   {
+    "metric": {
+     "job": "shop-web"
+    },
+    "value": [
+     1760062200,
+     "0.4"
+    ]
+   }
+  ],
+  "up": [
+   {
+    "metric": {
+     "instance": "shop-web-1",
+     "job": "node"
+    },
+    "value": [
+     1760062200,
+     "1"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-web-2",
+     "job": "node"
+    },
+    "value": [
+     1760062200,
+     "1"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-worker-1",
+     "job": "node"
+    },
+    "value": [
+     1760062200,
+     "1"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-db",
+     "job": "postgres"
+    },
+    "value": [
+     1760062200,
+     "1"
+    ]
+   },
+   {
+    "metric": {
+     "instance": "shop-alb",
+     "job": "alb"
+    },
+    "value": [
+     1760062200,
+     "1"
+    ]
+   }
+  ],
+  "sum by (datname) (pg_stat_database_numbackends{instance=\"shop-db\"})": [
+   {
+    "metric": {
+     "datname": "shop"
+    },
+    "value": [
+     1760062200,
+     "172"
+    ]
+   },
+   {
+    "metric": {
+     "datname": "postgres"
+    },
+    "value": [
+     1760062200,
+     "2"
+    ]
+   }
+  ],
+  "max by (instance) (pg_settings_max_connections{instance=\"shop-db\"})": [
+   {
+    "metric": {
+     "instance": "shop-db"
+    },
+    "value": [
+     1760062200,
+     "200"
+    ]
+   }
+  ]
+ },
+ "range": {
+  "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=\"shop-worker-1\"}[5m])))": [
+   {
+    "metric": {
+     "instance": "shop-worker-1"
+    },
+    "values": [
+     [
+      1760058000,
+      "19.5"
+     ],
+     [
+      1760058300,
+      "20.7"
+     ],
+     [
+      1760058600,
+      "21.9"
+     ],
+     [
+      1760058900,
+      "19.5"
+     ],
+     [
+      1760059200,
+      "20.7"
+     ],
+     [
+      1760059500,
+      "21.9"
+     ],
+     [
+      1760059800,
+      "19.5"
+     ],
+     [
+      1760060100,
+      "20.7"
+     ],
+     [
+      1760060400,
+      "21.9"
+     ],
+     [
+      1760060700,
+      "19.5"
+     ],
+     [
+      1760061000,
+      "20.7"
+     ],
+     [
+      1760061300,
+      "21.9"
+     ],
+     [
+      1760061600,
+      "93.0"
+     ]
+    ]
+   }
+  ]
+ }
+}

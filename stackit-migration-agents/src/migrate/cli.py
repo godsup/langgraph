@@ -244,7 +244,7 @@ def monitor(
     """Poll STACKIT Observability on a schedule. Read-only; never remediates."""
     settings = get_settings()
     runner = _runner()
-    every = interval or settings.monitor_interval_s
+    every = settings.monitor_interval_s if interval is None else max(interval, 0)
     count = 0
     try:
         while True:
