@@ -1,0 +1,6 @@
+{
+  "responses": {
+    "passed": "Two buckets (shop-assets-prod with 1.25 million objects and shop-user-uploads-prod with 313,000 objects) and the shop PostgreSQL database were copied to STACKIT, and all 8 verification checks passed: object counts, total sizes and sampled checksums match, and every one of the 12 tables has identical row counts with an identical schema. Two data stores were deliberately not migrated: shop-logs-archive holds Glacier objects that must be restored first, and the MySQL CRM database needs a manual copy into MariaDB. Nothing on AWS was modified or deleted.",
+    "failed": "Verification found differences between source and target; the cutover is blocked until they are fixed."
+  }
+}

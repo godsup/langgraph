@@ -1,0 +1,59 @@
+# Cutover runbook: {{ plan.source_cloud.value | upper }} → STACKIT
+
+Run `{{ plan.run_id }}`. Generated from the migration plan; adjust to the
+client's change process. The source environment stays untouched, which is the
+rollback path.
+
+## 1. Before the window
+
+- Announce the maintenance window to the workload owners.
+- Confirm `data-verification.md` is approved (the approval is bound to its SHA-256).
+{% for note in llm_notes %}
+- Check: {{ note }}
+{% endfor %}
+
+## 2. Freeze writes on the source
+
+- Put the applications into maintenance mode or stop writers.
+{% if databases %}
+- PostgreSQL is copied with `pg_dump`/`pg_restore` (point in time): writes made after
+  the dump started are not on STACKIT. Keep writes frozen, or re-run
+  `migrate data {{ plan.run_id }} --execute` inside the window.
+{% endif %}
+
+## 3. Final sync (automated by the approved cutover)
+
+{% for b in buckets if b.status.value == "copied" %}
+- `{{ b.source }}` → `{{ b.target }}`: final `rclone copy` (no deletes).
+{% endfor %}
+{% for b in buckets if b.status.value == "skipped" %}
+- `{{ b.source }}`: **not migrated**: {{ b.error }}
+{% endfor %}
+
+## 4. Switch the applications
+
+{% for db in databases %}
+- {{ db.name }}: point connection strings to the STACKIT instance
+  ({% if db.terraform_type == "stackit_postgresflex_instance" %}`terraform output {{ db.tf }}_host`, `{{ db.tf }}_port`{% else %}`terraform output {{ db.tf }}_host`{% endif %}; passwords from the sensitive outputs, never from this file).
+{% endfor %}
+{% if buckets %}
+- Object storage: endpoint `https://object.storage.eu01.onstackit.cloud`, region `eu01`, same bucket names; keys from the sensitive Terraform outputs.
+{% endif %}
+{% for lb in load_balancers %}
+- DNS: point the application hostname of `{{ lb.name }}` to `terraform output {{ lb.tf }}_address` (lower the TTL a day before).
+{% endfor %}
+
+## 5. Verify
+
+- Smoke-test the application end to end.
+- Start monitoring: `migrate monitor {{ plan.run_id }} --interval 60`.
+
+## 6. Rollback
+
+- Switch DNS and connection strings back to AWS. Nothing on AWS was changed or deleted.
+- Data written on STACKIT after the switch must be reconciled manually.
+
+## 7. Decommissioning
+
+Deleting source resources is **out of scope** for this system and must follow
+the client's own change process after a stabilisation period.

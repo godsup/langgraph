@@ -1,0 +1,58 @@
+{% set result_icon = {True: "✅", False: "❌"} %}
+# Data verification: {{ plan.source_cloud.value | upper }} → STACKIT
+
+| | |
+|---|---|
+| Run | `{{ plan.run_id }}` |
+| Generated | {{ generated.strftime("%Y-%m-%d %H:%M UTC") }} |
+| Result | {% if failed %}❌ {{ failed | length }} of {{ dm.checks | length }} checks failed: **no cutover**{% else %}✅ all {{ dm.checks | length }} checks passed{% endif %} |
+{% if plan.mock %}
+| Mode | **MOCK**: recorded transfer statistics, nothing was copied |
+{% endif %}
+
+## Summary
+
+{{ dm.summary }}
+
+## Transfers
+
+| Transfer | Method | Source | Target | Status | Details |
+|---|---|---|---|---|---|
+{% for t in dm.tasks %}
+| `{{ t.id }}` | {{ t.method }} | {{ t.source | cell }} | {{ t.target | cell }} | {{ t.status.value }} | {% if t.error %}{{ t.error | cell }}{% elif t.stats.get("objects_copied") is not none %}{{ "{:,}".format(t.stats["objects_copied"]) }} objects, {{ t.stats.get("bytes_copied") | bytes }}{% elif t.stats.get("dump_bytes") %}dump {{ t.stats["dump_bytes"] | bytes }}{% else %}-{% endif %} |
+{% endfor %}
+
+## Verification checks
+
+| Transfer | Check | Source | Target | Result | Details |
+|---|---|---|---|---|---|
+{% for c in dm.checks %}
+| `{{ c.task_id }}` | {{ c.name }} | {{ (("{:,}".format(c.source_value)) if c.source_value is number else c.source_value) | cell }} | {{ (("{:,}".format(c.target_value)) if c.target_value is number else c.target_value) | cell }} | {{ result_icon[c.passed] }} | {{ c.details | cell }} |
+{% endfor %}
+
+{% for t in dm.tasks if t.stats.get("row_counts") %}
+<details><summary>Row counts per table: <code>{{ t.id }}</code></summary>
+
+| Table | Source | Target | |
+|---|---:|---:|---|
+{% for table, counts in t.stats["row_counts"].items() %}
+| `{{ table }}` | {{ "{:,}".format(counts.source) if counts.source is not none else "-" }} | {{ "{:,}".format(counts.target) if counts.target is not none else "-" }} | {{ "✅" if counts.source == counts.target else "❌" }} |
+{% endfor %}
+
+</details>
+
+{% endfor %}
+## Method
+
+- **Object storage:** `rclone copy` (never `sync`/`move`/`delete`). Object count and total size from both sides; MD5 of a deterministic sample of objects downloaded from both sides.
+- **PostgreSQL:** `pg_dump --format=custom` + `pg_restore`. Exact row count per table on both sides; normalised `pg_dump --schema-only` compared by SHA-256.
+- **Source data was not modified or deleted.** Deleting source data is out of scope for this system.
+
+## Next step
+
+{% if failed %}
+Fix the failed checks, then re-run `migrate data {{ plan.run_id }} --execute`.
+{% else %}
+A human approves this report (its SHA-256 is bound to the approval), then the cutover runs and the
+steps in `cutover-runbook.md` are followed.
+{% endif %}

@@ -56,7 +56,7 @@ _PASSTHROUGH_PREFIXES: dict[str, tuple[str, ...]] = {
     "aws": ("AWS_",),
     "azure": ("AZURE_",),
     "stackit": ("STACKIT_", "TF_", "GH_", "GITHUB_"),
-    "datamove": ("AWS_", "RCLONE_"),
+    "datamove": ("AWS_", "RCLONE_", "PG_DSN_", "MIGRATE_RCLONE_"),
     "observability": (),
 }
 # Servers that perform (approval-gated) mutations.

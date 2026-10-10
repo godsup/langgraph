@@ -1,0 +1,92 @@
+{
+  "_note": "Recorded-style transfer and verification results for the mock demo. Fictional data.",
+  "buckets": {
+    "shop-assets-prod": {
+      "source": {
+        "objects": 1248903,
+        "bytes": 195857301504
+      },
+      "target": {
+        "objects": 1248903,
+        "bytes": 195857301504
+      },
+      "copy": {
+        "objects_copied": 1248903,
+        "bytes_copied": 195857301504,
+        "duration_s": 2841,
+        "errors": 0
+      },
+      "checksums": {
+        "sampled": 20,
+        "matched": 20,
+        "mismatches": [],
+        "missing": []
+      }
+    },
+    "shop-user-uploads-prod": {
+      "source": {
+        "objects": 312554,
+        "bytes": 73766215680
+      },
+      "target": {
+        "objects": 312554,
+        "bytes": 73766215680
+      },
+      "copy": {
+        "objects_copied": 312554,
+        "bytes_copied": 73766215680,
+        "duration_s": 1107,
+        "errors": 0
+      },
+      "checksums": {
+        "sampled": 20,
+        "matched": 20,
+        "mismatches": [],
+        "missing": []
+      }
+    }
+  },
+  "databases": {
+    "shop_db": {
+      "transfer": {
+        "strategy": "pg_dump/pg_restore",
+        "dump_bytes": 34034376704,
+        "duration_s": 3720
+      },
+      "row_counts": {
+        "source": {
+          "public.audit_events": 8442301,
+          "public.carts": 23190,
+          "public.coupons": 1204,
+          "public.customers": 182331,
+          "public.inventory_movements": 2331908,
+          "public.order_items": 3882190,
+          "public.orders": 1204551,
+          "public.payments": 1199872,
+          "public.product_images": 48221,
+          "public.products": 12408,
+          "public.reviews": 98442,
+          "public.shipments": 1150334
+        },
+        "target": {
+          "public.audit_events": 8442301,
+          "public.carts": 23190,
+          "public.coupons": 1204,
+          "public.customers": 182331,
+          "public.inventory_movements": 2331908,
+          "public.order_items": 3882190,
+          "public.orders": 1204551,
+          "public.payments": 1199872,
+          "public.product_images": 48221,
+          "public.products": 12408,
+          "public.reviews": 98442,
+          "public.shipments": 1150334
+        }
+      },
+      "schema": {
+        "source": "CREATE TABLE public.customers (\n    id bigint NOT NULL,\n    email text NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL\n);\nCREATE TABLE public.products (\n    id bigint NOT NULL,\n    sku text NOT NULL,\n    name text NOT NULL,\n    price_cents integer NOT NULL\n);\nCREATE TABLE public.orders (\n    id bigint NOT NULL,\n    customer_id bigint NOT NULL,\n    status text NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL\n);\nCREATE TABLE public.order_items (\n    order_id bigint NOT NULL,\n    product_id bigint NOT NULL,\n    quantity integer NOT NULL\n);\nALTER TABLE ONLY public.customers ADD CONSTRAINT customers_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.products ADD CONSTRAINT products_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.orders ADD CONSTRAINT orders_pkey PRIMARY KEY (id);\nCREATE INDEX orders_customer_id_idx ON public.orders USING btree (customer_id);\nALTER TABLE ONLY public.orders ADD CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id);\n",
+        "target": "CREATE TABLE public.customers (\n    id bigint NOT NULL,\n    email text NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL\n);\nCREATE TABLE public.products (\n    id bigint NOT NULL,\n    sku text NOT NULL,\n    name text NOT NULL,\n    price_cents integer NOT NULL\n);\nCREATE TABLE public.orders (\n    id bigint NOT NULL,\n    customer_id bigint NOT NULL,\n    status text NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL\n);\nCREATE TABLE public.order_items (\n    order_id bigint NOT NULL,\n    product_id bigint NOT NULL,\n    quantity integer NOT NULL\n);\nALTER TABLE ONLY public.customers ADD CONSTRAINT customers_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.products ADD CONSTRAINT products_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.orders ADD CONSTRAINT orders_pkey PRIMARY KEY (id);\nCREATE INDEX orders_customer_id_idx ON public.orders USING btree (customer_id);\nALTER TABLE ONLY public.orders ADD CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id);\n"
+      }
+    }
+  }
+}

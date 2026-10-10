@@ -210,6 +210,7 @@ class DeploymentResult(Model):
 class TransferKind(StrEnum):
     OBJECT_STORAGE = "object_storage"
     POSTGRES = "postgres"
+    MYSQL = "mysql"
 
 
 class TransferStatus(StrEnum):

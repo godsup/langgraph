@@ -6,6 +6,7 @@ from typing import Protocol
 
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
@@ -39,16 +40,16 @@ class RichReporter:
         self.console.rule(f"[{AGENT_STYLE.get(agent, 'bold')}]{title}")
 
     def step(self, agent: str, message: str) -> None:
-        self.console.print(f"{self._tag(agent)}  {message}", highlight=False)
+        self.console.print(f"{self._tag(agent)}  {escape(message)}", highlight=False)
 
     def ok(self, agent: str, message: str) -> None:
         self.console.print(
-            f"{self._tag(agent)}  [green]✔[/] {message}", highlight=False
+            f"{self._tag(agent)}  [green]✔[/] {escape(message)}", highlight=False
         )
 
     def warn(self, agent: str, message: str) -> None:
         self.console.print(
-            f"{self._tag(agent)}  [yellow]⚠[/] {message}", highlight=False
+            f"{self._tag(agent)}  [yellow]⚠[/] {escape(message)}", highlight=False
         )
 
     def panel(self, title: str, markdown: str, *, style: str = "cyan") -> None:
@@ -59,7 +60,7 @@ class RichReporter:
         for column in columns:
             table.add_column(column)
         for row in rows:
-            table.add_row(*row)
+            table.add_row(*(escape(cell) for cell in row))
         self.console.print(table)
 
 
