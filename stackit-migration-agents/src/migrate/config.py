@@ -7,6 +7,7 @@ monitoring rules) lives in editable YAML files under `config/`.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
@@ -14,6 +15,8 @@ from typing import Any, Literal
 import yaml
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from migrate.audit import looks_secret_env, secret_variants
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -127,15 +130,48 @@ class Settings(BaseSettings):
         return self.checkpoint_sqlite_path or self.runs_dir / "checkpoints.sqlite"
 
     def secret_values(self) -> list[str]:
-        """Every configured secret value, used by the redactor."""
+        """Every configured secret value, used by the redactor: settings
+        fields plus secret-looking variables (e.g. per-database DSNs) from the
+        environment and `.env`."""
         values: list[str] = []
         for name in type(self).model_fields:
             value = getattr(self, name)
             if isinstance(value, SecretStr):
                 raw = value.get_secret_value()
                 if raw:
-                    values.append(raw)
+                    values += secret_variants(raw)
+        for key, raw in self.environment().items():
+            if raw and looks_secret_env(key):
+                values += secret_variants(raw)
         return values
+
+    def environment(self) -> dict[str, str]:
+        """`.env` merged under the process environment (the environment wins),
+        the same precedence pydantic-settings uses for the fields above."""
+        env_file = self.model_config.get("env_file")
+        values = read_env_file(Path(env_file)) if isinstance(env_file, str) else {}
+        return {**values, **os.environ}
+
+
+def read_env_file(path: Path) -> dict[str, str]:
+    """Minimal `.env` reader: KEY=VALUE lines, optional `export `, `#`
+    comments, single or double quotes. No interpolation."""
+    if not path.is_file():
+        return {}
+    values: dict[str, str] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.removeprefix("export ").partition("=")
+        key, value = key.strip(), value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+            value = value[1:-1]
+        elif " #" in value:
+            value = value.split(" #", 1)[0].rstrip()
+        if key.isidentifier():
+            values[key] = value
+    return values
 
 
 @lru_cache

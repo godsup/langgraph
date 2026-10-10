@@ -6,7 +6,8 @@ falling back to `SOURCE_PG_DSN` / `TARGET_PG_DSN`. They are turned into libpq
 environment variables (PGHOST, PGPASSWORD, ...) so that passwords never show
 up in process arguments, tool arguments, prompts or logs.
 
-v1 strategy: `pg_dump --format=custom` + `pg_restore`. `LogicalReplication`
+v1 strategy: `pg_dump --format=custom` + `pg_restore --clean --if-exists` (the
+clean-up only ever runs against the target). `LogicalReplication`
 is the extension point for near-zero-downtime migrations.
 """
 
@@ -48,18 +49,27 @@ def dsn_for(side: str, ref: str) -> str:
 
 
 def libpq_env(dsn: str) -> dict[str, str]:
-    """postgresql://user:pass@host:port/db?sslmode=require -> PG* variables."""
-    url = urlparse(dsn)
+    """postgresql://user:pass@host:port/db?sslmode=require -> PG* variables.
+
+    Parse errors never echo the connection string: parts of it (even of the
+    password) would otherwise end up in the audit log, reports or prompts."""
+    try:
+        url = urlparse(dsn)
+        values = {
+            "PGHOST": url.hostname,
+            "PGPORT": str(url.port) if url.port else None,
+            "PGUSER": unquote(url.username) if url.username else None,
+            "PGPASSWORD": unquote(url.password) if url.password else None,
+            "PGDATABASE": url.path.lstrip("/") or None,
+        }
+    except ValueError:
+        raise ValueError(
+            "invalid PostgreSQL connection string (percent-encode special characters "
+            "in the password)"
+        ) from None
     if url.scheme not in ("postgres", "postgresql"):
         raise ValueError("expected a postgresql:// connection string")
     env = {k: v for k, v in os.environ.items() if not k.startswith("PG")}
-    values = {
-        "PGHOST": url.hostname,
-        "PGPORT": str(url.port) if url.port else None,
-        "PGUSER": unquote(url.username) if url.username else None,
-        "PGPASSWORD": unquote(url.password) if url.password else None,
-        "PGDATABASE": url.path.lstrip("/") or None,
-    }
     query = parse_qs(url.query)
     if "sslmode" in query:
         values["PGSSLMODE"] = query["sslmode"][0]
@@ -92,9 +102,14 @@ class DumpRestore:
         return dump_file
 
     def restore(self, ref: str, dump_file: Path) -> dict[str, Any]:
+        # --clean --if-exists drops and recreates the dumped objects on the
+        # TARGET only, so re-running the data stage (after a failed check, a
+        # rejected cutover or a crash) does not fail on existing tables.
         result = run(
             [
                 "pg_restore",
+                "--clean",
+                "--if-exists",
                 "--no-owner",
                 "--no-privileges",
                 "--exit-on-error",
@@ -143,6 +158,7 @@ def row_counts(side: str, ref: str) -> dict[str, int]:
         ["psql", "--no-psqlrc", "-At", "-F", "\t", "-c", ROW_COUNTS_SQL],
         env=env,
         timeout=3600,
+        max_output=None,  # data: never cut off
     ).stdout
     counts = {}
     for line in out.splitlines():
@@ -159,6 +175,7 @@ def schema(side: str, ref: str) -> str:
         ["pg_dump", "--schema-only", "--no-owner", "--no-privileges", "--no-comments"],
         env=env,
         timeout=3600,
+        max_output=None,  # a cut-off schema would hide differences
     ).stdout
     lines = [
         line

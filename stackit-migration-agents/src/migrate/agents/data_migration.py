@@ -444,7 +444,9 @@ async def _verify_bucket(
         VerificationCheck(
             task_id=task.id,
             name="sample_checksums",
-            passed=sums["sampled"] > 0 and sums["matched"] == sums["sampled"],
+            # An empty source bucket has nothing to sample and passes.
+            passed=sums["matched"] == sums["sampled"]
+            and (sums["sampled"] > 0 or source["objects"] == 0),
             source_value=f"{sums['sampled']} sampled",
             target_value=f"{sums['matched']} match",
             details="; ".join(

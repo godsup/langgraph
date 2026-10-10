@@ -85,7 +85,9 @@ def server_env(
     approval_secret: str,
 ) -> dict[str, str]:
     env = {k: v for k, v in os.environ.items() if k in _BASE_ENV}
-    for key, value in os.environ.items():
+    # Credentials may live in `.env` as well as the environment (e.g. the
+    # per-database PG_DSN_* values); servers see both, the environment wins.
+    for key, value in settings.environment().items():
         if key.startswith(_PASSTHROUGH_PREFIXES[server]):
             env[key] = value
     env.update(
@@ -119,6 +121,7 @@ def server_env(
     elif server == "datamove":
         extra = {
             "AWS_REGION": settings.aws_region,
+            "AWS_PROFILE": settings.aws_profile,
             "SOURCE_PG_DSN": _secret(settings.source_pg_dsn),
             "TARGET_PG_DSN": _secret(settings.target_pg_dsn),
             "STACKIT_S3_ENDPOINT": settings.stackit_s3_endpoint,

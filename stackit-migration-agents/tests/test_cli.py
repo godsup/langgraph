@@ -67,3 +67,11 @@ def test_failed_deployment_exits_with_code_3(cli_env: Path) -> None:
     result = cli.invoke(app, ["approve", run_id, "--approver", "alice"])
     assert result.exit_code == 3, result.output
     assert "changed after it was approved" in result.output
+
+
+def test_run_mock_end_to_end_azure(cli_env: Path) -> None:
+    result = CliRunner().invoke(app, ["run", "--source", "azure", "--mock", "--yes"])
+    assert result.exit_code == 0, result.output
+    run_id = re.search(r"Run (\d{8}-\d{6}-[0-9a-f]{4}) created", result.output).group(1)
+    status = CliRunner().invoke(app, ["status", run_id])
+    assert "cut_over" in status.output, status.output

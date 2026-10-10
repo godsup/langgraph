@@ -85,6 +85,13 @@ async def begin(state: MigrationState, runtime: Runtime[AppContext]) -> dict[str
         action="invocation.start",
         inputs={"goal": state.get("goal"), "options": state.get("options")},
     )
+    goal = state.get("goal", "all")
+    if all(stage_done(plan, stage, goal, []) for stage in GOAL_STAGES[goal]):
+        ctx.reporter.ok(
+            "orchestrator",
+            f"Nothing to do: everything up to `{goal}` is already complete for this run "
+            "(see `migrate status`).",
+        )
     return commit(ctx, plan, visited=[VISITED_RESET])
 
 

@@ -44,6 +44,28 @@
         "mismatches": [],
         "missing": []
       }
+    },
+    "stportalprod": {
+      "source": {
+        "objects": 84210,
+        "bytes": 21474836480
+      },
+      "target": {
+        "objects": 84210,
+        "bytes": 21474836480
+      },
+      "copy": {
+        "objects_copied": 84210,
+        "bytes_copied": 21474836480,
+        "duration_s": 412,
+        "errors": 0
+      },
+      "checksums": {
+        "sampled": 20,
+        "matched": 20,
+        "mismatches": [],
+        "missing": []
+      }
     }
   },
   "databases": {
@@ -86,6 +108,29 @@
       "schema": {
         "source": "CREATE TABLE public.customers (\n    id bigint NOT NULL,\n    email text NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL\n);\nCREATE TABLE public.products (\n    id bigint NOT NULL,\n    sku text NOT NULL,\n    name text NOT NULL,\n    price_cents integer NOT NULL\n);\nCREATE TABLE public.orders (\n    id bigint NOT NULL,\n    customer_id bigint NOT NULL,\n    status text NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL\n);\nCREATE TABLE public.order_items (\n    order_id bigint NOT NULL,\n    product_id bigint NOT NULL,\n    quantity integer NOT NULL\n);\nALTER TABLE ONLY public.customers ADD CONSTRAINT customers_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.products ADD CONSTRAINT products_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.orders ADD CONSTRAINT orders_pkey PRIMARY KEY (id);\nCREATE INDEX orders_customer_id_idx ON public.orders USING btree (customer_id);\nALTER TABLE ONLY public.orders ADD CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id);\n",
         "target": "CREATE TABLE public.customers (\n    id bigint NOT NULL,\n    email text NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL\n);\nCREATE TABLE public.products (\n    id bigint NOT NULL,\n    sku text NOT NULL,\n    name text NOT NULL,\n    price_cents integer NOT NULL\n);\nCREATE TABLE public.orders (\n    id bigint NOT NULL,\n    customer_id bigint NOT NULL,\n    status text NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL\n);\nCREATE TABLE public.order_items (\n    order_id bigint NOT NULL,\n    product_id bigint NOT NULL,\n    quantity integer NOT NULL\n);\nALTER TABLE ONLY public.customers ADD CONSTRAINT customers_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.products ADD CONSTRAINT products_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.orders ADD CONSTRAINT orders_pkey PRIMARY KEY (id);\nCREATE INDEX orders_customer_id_idx ON public.orders USING btree (customer_id);\nALTER TABLE ONLY public.orders ADD CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id);\n"
+      }
+    },
+    "psql_portal": {
+      "transfer": {
+        "strategy": "pg_dump/pg_restore",
+        "dump_bytes": 2147483648,
+        "duration_s": 540
+      },
+      "row_counts": {
+        "source": {
+          "public.accounts": 18240,
+          "public.documents": 402117,
+          "public.sessions": 77310
+        },
+        "target": {
+          "public.accounts": 18240,
+          "public.documents": 402117,
+          "public.sessions": 77310
+        }
+      },
+      "schema": {
+        "source": "CREATE TABLE public.accounts (\n    id bigint NOT NULL,\n    email text NOT NULL\n);\nCREATE TABLE public.documents (\n    id bigint NOT NULL,\n    account_id bigint NOT NULL,\n    title text NOT NULL,\n    blob_path text NOT NULL\n);\nALTER TABLE ONLY public.accounts ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.documents ADD CONSTRAINT documents_pkey PRIMARY KEY (id);\n",
+        "target": "CREATE TABLE public.accounts (\n    id bigint NOT NULL,\n    email text NOT NULL\n);\nCREATE TABLE public.documents (\n    id bigint NOT NULL,\n    account_id bigint NOT NULL,\n    title text NOT NULL,\n    blob_path text NOT NULL\n);\nALTER TABLE ONLY public.accounts ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);\nALTER TABLE ONLY public.documents ADD CONSTRAINT documents_pkey PRIMARY KEY (id);\n"
       }
     }
   }

@@ -3,7 +3,9 @@
 Remotes are defined through environment variables only (no config file, no
 secrets on the command line):
 
-- `src`: AWS S3, credentials from the standard AWS_* variables / profile.
+- `src`: AWS S3, credentials from the standard AWS_* variables / profile. An
+  explicit choice is required (AWS_PROFILE, access keys, web identity, or
+  AWS_USE_DEFAULT_CREDENTIALS=1), so a stray default profile is never used.
 - `dst`: STACKIT Object Storage (S3-compatible), endpoint and keys from
   STACKIT_S3_* variables.
 
@@ -20,7 +22,15 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from migrate.proc import run
+from migrate.proc import MAX_OUTPUT, run
+
+# Output of these is parsed as data and must never be cut off.
+DATA_SUBCOMMANDS = frozenset({"size", "lsjson", "md5sum"})
+EXPLICIT_AWS_CREDENTIALS = (
+    "AWS_PROFILE",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_WEB_IDENTITY_TOKEN_FILE",
+)
 
 ALLOWED_SUBCOMMANDS = frozenset({"copy", "size", "lsjson", "md5sum", "version"})
 
@@ -40,6 +50,15 @@ def remote_env() -> dict[str, str]:
             RCLONE_CONFIG_DST_REMOTE=dst_root,
         )
         return env
+    if (
+        not any(env.get(k) for k in EXPLICIT_AWS_CREDENTIALS)
+        and env.get("AWS_USE_DEFAULT_CREDENTIALS") != "1"
+    ):
+        raise PermissionError(
+            "no AWS credentials configured for the source: set AWS_PROFILE (read-only "
+            "profile) or access keys, or AWS_USE_DEFAULT_CREDENTIALS=1 to use the "
+            "default chain (e.g. an instance role)"
+        )
     env.update(
         {
             "RCLONE_CONFIG_SRC_TYPE": "s3",
@@ -66,7 +85,12 @@ def rclone(subcommand: str, *args: str, timeout: float = 24 * 3600) -> str:
         raise PermissionError(
             f"rclone {subcommand} is not allowed (data must never be deleted)"
         )
-    return run(["rclone", subcommand, *args], env=remote_env(), timeout=timeout).stdout
+    return run(
+        ["rclone", subcommand, *args],
+        env=remote_env(),
+        timeout=timeout,
+        max_output=None if subcommand in DATA_SUBCOMMANDS else MAX_OUTPUT,
+    ).stdout
 
 
 def size(remote: str, bucket: str) -> dict[str, Any]:
@@ -113,7 +137,7 @@ def md5_of(remote: str, bucket: str, keys: list[str]) -> dict[str, str]:
         files_from = fh.name
     try:
         out = rclone(
-            "md5sum", f"{remote}:{bucket}", "--download", "--files-from", files_from
+            "md5sum", f"{remote}:{bucket}", "--download", "--files-from-raw", files_from
         )
     finally:
         Path(files_from).unlink(missing_ok=True)

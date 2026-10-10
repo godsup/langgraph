@@ -70,6 +70,42 @@ def test_rclone_copy_and_verify_local(
     assert len(list((src / "assets" / "img").iterdir())) == 40  # source untouched
 
 
+@pytest.mark.skipif(shutil.which("rclone") is None, reason="rclone not installed")
+def test_rclone_large_empty_and_odd_buckets(
+    tmp_path: Path, datamove_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mcp_servers.datamove import server
+
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    for bucket in ("big", "empty", "odd"):
+        (src / bucket).mkdir(parents=True)
+        (dst / bucket).mkdir(parents=True)
+    # Enough objects that the lsjson listing is far beyond the 200 KB log limit.
+    deep = src / "big" / ("d" * 60) / ("e" * 60)
+    deep.mkdir(parents=True)
+    for i in range(2500):
+        (deep / f"object-{i:05d}-{'x' * 40}.bin").write_bytes(b"%d" % i)
+    for name in ("#hash.txt", ";semi.txt", " leading-space.txt"):
+        (src / "odd" / name).write_bytes(name.encode())
+    monkeypatch.setenv("MIGRATE_RCLONE_SRC_ROOT", str(src))
+    monkeypatch.setenv("MIGRATE_RCLONE_DST_ROOT", str(dst))
+
+    for bucket in ("big", "empty", "odd"):
+        server.copy_bucket(source_bucket=bucket, target_bucket=bucket, dry_run=False)
+    sums = server.sample_checksums(
+        source_bucket="big", target_bucket="big", sample_size=50
+    )
+    assert sums["sampled"] == 50 and sums["matched"] == 50
+    sums = server.sample_checksums(
+        source_bucket="odd", target_bucket="odd", sample_size=10
+    )
+    assert sums["sampled"] == 3 and sums["matched"] == 3, sums
+    sums = server.sample_checksums(
+        source_bucket="empty", target_bucket="empty", sample_size=10
+    )
+    assert sums["sampled"] == 0 and sums["matched"] == 0
+
+
 def _free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -192,6 +228,11 @@ def test_pg_dump_restore_and_verify(
 
     result = server.pg_transfer(ref="shop_db", dry_run=False)
     assert result["strategy"] == "pg_dump/pg_restore" and result["dump_bytes"] > 0
+    # Re-running the stage (failed check, rejected cutover, crash) must work.
+    _psql(src_port, "shop", "insert into customers values (501, 'late@example.com')")
+    server.pg_transfer(ref="shop_db", dry_run=False)
+    _psql(src_port, "shop", "delete from customers where id = 501")
+    server.pg_transfer(ref="shop_db", dry_run=False)
     src_counts = server.pg_row_counts(side="source", ref="shop_db")["tables"]
     assert src_counts == {"public.customers": 500, "public.orders": 2500}
     assert server.pg_row_counts(side="target", ref="shop_db")["tables"] == src_counts

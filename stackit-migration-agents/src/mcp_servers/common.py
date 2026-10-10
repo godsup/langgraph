@@ -16,7 +16,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from migrate.approval import SECRET_ENV, ApprovalError, ApprovalTokens
-from migrate.audit import AuditLog, Redactor
+from migrate.audit import AuditLog, Redactor, looks_secret_env, secret_variants
 
 MOCK_ENV = "MIGRATE_MOCK"
 FIXTURES_ENV = "MIGRATE_FIXTURES_DIR"
@@ -62,14 +62,13 @@ def server_audit(server: str) -> AuditLog | None:
     """Audit log of the current run, written from inside the server process."""
     if not os.environ.get(RUN_DIR_ENV):
         return None
-    secrets = [v for k, v in os.environ.items() if _looks_secret(k) and v]
+    secrets = [
+        variant
+        for k, v in os.environ.items()
+        if looks_secret_env(k) and v
+        for variant in secret_variants(v)
+    ]
     return AuditLog(run_dir() / "audit.jsonl", Redactor(secrets))
-
-
-def _looks_secret(env_name: str) -> bool:
-    return bool(
-        re.search(r"(SECRET|PASSWORD|TOKEN|KEY|DSN)", env_name)
-    ) and not env_name.endswith("_PATH")
 
 
 def require_approval(token: str | None, *, action: str, artifact_sha256: str) -> None:

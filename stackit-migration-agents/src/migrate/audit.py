@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 from pydantic import BaseModel, SecretStr
 
@@ -41,6 +42,30 @@ _SECRET_PATTERNS = [
     re.compile(r"https://hooks\.slack\.com/services/\S+"),
     re.compile(r"https://[a-z0-9.-]+\.webhook\.office\.com/\S+"),
 ]
+
+
+def looks_secret_env(name: str) -> bool:
+    """Environment variable names whose values are treated as secrets."""
+    return bool(
+        re.search(r"(SECRET|PASSWORD|TOKEN|KEY|DSN)", name)
+    ) and not name.endswith("_PATH")
+
+
+def secret_variants(value: str) -> list[str]:
+    """A secret plus the forms it can show up in elsewhere: a connection
+    string's password, raw and percent-decoded (libpq gets the decoded one)."""
+    variants = [value]
+    match = re.match(r"^[a-z][a-z0-9+.-]*://[^:/@]*:(.+)@[^@]*$", value, re.I)
+    if match:
+        variants += [match.group(1), unquote(match.group(1))]
+    else:
+        try:
+            password = urlparse(value).password
+        except ValueError:
+            password = None
+        if password:
+            variants += [password, unquote(password)]
+    return variants
 
 
 class Redactor:
