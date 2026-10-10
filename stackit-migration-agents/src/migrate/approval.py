@@ -53,7 +53,9 @@ def terraform_bundle(tf_dir: Path) -> list[Path]:
         if not (path.suffix in BUNDLE_SUFFIXES or path.name == PLAN_FILE):
             continue
         if path.is_symlink():
-            raise ApprovalError(f"refusing symlink in the Terraform directory: {path.name}")
+            raise ApprovalError(
+                f"refusing symlink in the Terraform directory: {path.name}"
+            )
         if path.is_file():
             files.append(path)
     return files

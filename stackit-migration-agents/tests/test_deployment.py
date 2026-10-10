@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from migrate.approval import sha256_bundle
 from migrate.runner import Runner
 from migrate.state import DeploymentStatus, DeployMode, RunOptions, SourceCloud
 
@@ -43,7 +44,9 @@ def test_gate_payload_has_summary_and_raw_plan(runner: Runner) -> None:
     assert gate["gate"] == "deployment"
     assert "Plan: 39 to add" in gate["raw_plan"]
     assert "Risks / review points" in gate["summary"]
-    assert gate["artifact_sha256"] == outcome.plan.deployment.plan_sha256
+    # The approval covers the whole Terraform bundle: saved plan, code, inputs.
+    tf_dir = Path(outcome.plan.deployment.terraform_dir)
+    assert gate["artifact_sha256"] == sha256_bundle(tf_dir)
 
 
 def test_apply_after_approval(runner: Runner) -> None:
@@ -62,11 +65,34 @@ def test_pr_mode_opens_a_pull_request(runner: Runner) -> None:
     assert plan.deployment.pr_url.startswith("https://github.com/")
 
 
-def test_plan_changed_after_approval_is_refused(runner: Runner) -> None:
+def _approve_after_tampering(runner: Runner, tamper) -> object:
     run_id = _run(runner)
     outcome = asyncio.run(runner.advance(run_id, "deploy", RunOptions()))
-    Path(outcome.plan.deployment.plan_file).write_text(
-        '{"changes": [], "tampered": true}'
+    tamper(Path(outcome.plan.deployment.terraform_dir))
+    return asyncio.run(runner.decide(run_id, approved=True, approver="alice")).plan
+
+
+def test_plan_changed_after_approval_is_refused(runner: Runner) -> None:
+    plan = _approve_after_tampering(
+        runner,
+        lambda tf: (tf / "tfplan").write_text('{"changes": [], "tampered": true}'),
     )
-    with pytest.raises(PermissionError, match="changed after it was approved"):
-        asyncio.run(runner.decide(run_id, approved=True, approver="alice"))
+    assert plan.deployment.status == DeploymentStatus.FAILED
+    assert "changed after it was approved" in plan.halt_reason
+    assert "migrate deploy" in plan.halt_reason
+
+
+@pytest.mark.parametrize("mode", [DeployMode.APPLY, DeployMode.PR])
+def test_terraform_code_changed_after_approval_is_refused(
+    runner: Runner, mode: DeployMode
+) -> None:
+    run_id = _run(runner)
+    outcome = asyncio.run(
+        runner.advance(run_id, "deploy", RunOptions(deploy_mode=mode))
+    )
+    compute = Path(outcome.plan.deployment.terraform_dir) / "compute.tf"
+    compute.write_text(compute.read_text() + "\n# sneaky edit\n")
+    plan = asyncio.run(runner.decide(run_id, approved=True, approver="alice")).plan
+    assert plan.deployment.status == DeploymentStatus.FAILED
+    assert "changed after it was approved" in plan.halt_reason
+    assert plan.deployment.pr_url is None

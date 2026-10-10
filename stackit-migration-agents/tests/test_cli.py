@@ -55,3 +55,15 @@ def test_unknown_run_is_a_clean_error(cli_env: Path) -> None:
     result = CliRunner().invoke(app, ["status", "20990101-000000-ffff"])
     assert result.exit_code == 1
     assert "not found" in result.output
+
+
+def test_failed_deployment_exits_with_code_3(cli_env: Path) -> None:
+    cli = CliRunner()
+    out = cli.invoke(app, ["discover", "--source", "aws", "--mock"])
+    run_id = re.search(r"Run (\S+) created", out.output).group(1)
+    assert cli.invoke(app, ["deploy", run_id]).exit_code == 0
+    compute = cli_env / run_id / "terraform" / "compute.tf"
+    compute.write_text(compute.read_text() + "# edited after the approval request\n")
+    result = cli.invoke(app, ["approve", run_id, "--approver", "alice"])
+    assert result.exit_code == 3, result.output
+    assert "changed after it was approved" in result.output

@@ -57,7 +57,7 @@ def tf_ident(name: str) -> str:
 
 def dns_name(name: str, max_len: int = 63) -> str:
     """Lowercase DNS-label-style name: ^[a-z]([-a-z0-9]*[a-z0-9])?$."""
-    value = re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-")
+    value = re.sub(r"-+", "-", re.sub(r"[^a-z0-9-]+", "-", name.lower())).strip("-")
     if not value or not value[0].isalpha():
         value = f"r-{value}"
     return value[:max_len].rstrip("-")
@@ -70,6 +70,17 @@ def ske_name(name: str, limit: int = 11) -> str:
     while len(words) > 1 and len("-".join(words)) > limit:
         words = words[1:]
     return dns_name("-".join(words), limit)
+
+
+def unique_ske_name(name: str, used: set[str], limit: int = 11) -> str:
+    """`ske_name`, made unique: two clusters must never share a name, or the
+    second apply would act on the first cluster."""
+    candidate, n = ske_name(name, limit), 2
+    while candidate in used:
+        suffix = f"-{n}"
+        candidate, n = ske_name(name, limit - len(suffix)) + suffix, n + 1
+    used.add(candidate)
+    return candidate
 
 
 def hcl_string(value: Any) -> str:
@@ -276,6 +287,7 @@ def build_model(plan: MigrationPlan) -> TerraformModel:
             {
                 "tf": tf,
                 "name": dns_name(res.name),
+                "nic_name": dns_name(res.name, 59) + "-nic",
                 "machine_type": spec["machine_type"],
                 "availability_zone": spec.get("availability_zone", "eu01-1"),
                 "boot_volume_gb": max(int(spec.get("boot_volume_gb") or 20), 20),
@@ -354,25 +366,36 @@ def build_model(plan: MigrationPlan) -> TerraformModel:
         )
 
     # SKE clusters before databases (databases may allow SKE egress).
+    ske_names: set[str] = set()
     for res in plan.resources:
         if res.kind != ResourceKind.KUBERNETES_CLUSTER or not (m := renderable(res)):
             continue
         spec = m.target_spec
+        pools = _node_pools(spec.get("node_pools", []))
+        if not pools:
+            model.skipped.append(
+                Skipped(
+                    res.name,
+                    res.source_type,
+                    "no node group with a STACKIT machine type (Fargate-only clusters "
+                    "have no node pools to create)",
+                )
+            )
+            continue
+        name = unique_ske_name(res.name, ske_names)
+        if name != ske_name(res.name):
+            model.reviews.append(
+                f"{res.name}: SKE name {ske_name(res.name)!r} is already used by "
+                f"another cluster; renamed to {name!r}"
+            )
         version = spec.get("kubernetes_version_min") or ""
         model.ske_clusters.append(
             {
                 "tf": names.take("ske", res.name),
-                "name": ske_name(res.name),
+                "name": name,
                 "source_name": res.name,
                 "kubernetes_version_min": ".".join(version.split(".")[:2]) or None,
-                "node_pools": [
-                    {
-                        **pool,
-                        "max_surge": len(pool.get("availability_zones") or ["eu01-1"]),
-                    }
-                    for pool in spec.get("node_pools", [])
-                    if pool.get("machine_type")
-                ],
+                "node_pools": pools,
                 "source_id": res.id,
                 "review": m.status == MappingStatus.PARTIAL,
             }
@@ -393,11 +416,17 @@ def build_model(plan: MigrationPlan) -> TerraformModel:
             network_tf[s] for s in spec.get("client_networks", []) if s in network_tf
         ]
         k8s = set(spec.get("kubernetes_clients", []))
+        ske_tfs = [c["tf"] for c in model.ske_clusters if c["source_name"] in k8s]
+        if not clients and not ske_tfs:
+            model.reviews.append(
+                f"{res.name}: no migrated client network or SKE cluster was found, so its "
+                "ACL is empty; set var.extra_db_allowed_cidrs or terraform plan stops"
+            )
         common = {
             "source_id": res.id,
             "review": m.status == MappingStatus.PARTIAL,
             "client_network_tfs": clients,
-            "ske_tfs": [c["tf"] for c in model.ske_clusters if c["source_name"] in k8s],
+            "ske_tfs": ske_tfs,
         }
         if m.terraform_type == "stackit_postgresflex_instance":
             flavor = spec.get("flavor")
@@ -526,6 +555,43 @@ def _security_group(
     }
 
 
+def _node_pools(pools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Node pools with a machine type, with names unique within the cluster."""
+    used: set[str] = set()
+    out = []
+    for pool in pools:
+        if not pool.get("machine_type"):
+            continue
+        base = pool.get("name") or "pool"
+        name, n = base, 2
+        while name in used:
+            name, n = f"{base[: 15 - len(str(n))]}{n}", n + 1
+        used.add(name)
+        out.append(
+            {
+                **pool,
+                "name": name,
+                "max_surge": len(pool.get("availability_zones") or ["eu01-1"]),
+            }
+        )
+    return out
+
+
+# Provider limits (checked in the v0.119.0 schema): the network load balancer
+# takes exactly one network, the application load balancer one or two.
+MAX_LB_NETWORKS = {"stackit_loadbalancer": 1, "stackit_application_load_balancer": 2}
+
+# AWS NLB listener protocol -> STACKIT network load balancer protocols.
+NLB_PROTOCOLS = {
+    "TCP": ["PROTOCOL_TCP"],
+    "UDP": ["PROTOCOL_UDP"],
+    "TCP_UDP": ["PROTOCOL_TCP", "PROTOCOL_UDP"],
+    "TLS": ["PROTOCOL_TLS_PASSTHROUGH"],
+    "HTTP": ["PROTOCOL_TCP"],
+    "HTTPS": ["PROTOCOL_TLS_PASSTHROUGH"],
+}
+
+
 def _load_balancer(
     res: SourceResource,
     m: TargetMapping,
@@ -543,15 +609,35 @@ def _load_balancer(
         )
         return None
     servers = {s["tf"]: s for s in model.servers}
+    notes = []
+
+    # Keep the networks with the most targets, up to the provider limit.
+    by_network: dict[str, list[dict[str, Any]]] = {}
+    for t in migrated:
+        by_network.setdefault(servers[server_tf[t["id"]]]["network_tf"], []).append(t)
+    ranked = sorted(by_network, key=lambda net: (-len(by_network[net]), net))
+    limit = MAX_LB_NETWORKS.get(m.terraform_type or "", 1)
+    kept, dropped = ranked[:limit], ranked[limit:]
+    if dropped:
+        lost = sorted(
+            servers[server_tf[t["id"]]]["name"]
+            for net in dropped
+            for t in by_network[net]
+        )
+        notes.append(
+            f"targets {', '.join(lost)} are not added: this STACKIT load balancer type "
+            f"supports {limit} network(s) and they sit in another one. Route that network "
+            "or move the servers, then add them to the target pool."
+        )
+    migrated = [
+        t for t in migrated if servers[server_tf[t["id"]]]["network_tf"] in kept
+    ]
+
     target_port = next((t.get("port") for t in migrated if t.get("port")), None) or (
         groups[0].get("port") if groups else 80
     )
     health = (groups[0].get("health_check") or {}) if groups else {}
-    target_networks = sorted(
-        {servers[server_tf[t["id"]]]["network_tf"] for t in migrated}
-    )
     listeners = props.get("listeners", [])
-    notes = []
     tls = [li for li in listeners if li.get("tls_certificates")]
     redirects = [
         li for li in listeners if "redirect" in (li.get("default_actions") or [])
@@ -575,7 +661,9 @@ def _load_balancer(
             }
             for t in migrated
         ],
-        "network_tfs": target_networks,
+        "network_tfs": kept,
+        "tls": False,
+        "backend_tls": False,
         "source_id": res.id,
         "notes": notes,
         "review": m.status == MappingStatus.PARTIAL,
@@ -593,16 +681,36 @@ def _load_balancer(
             if "redirect" not in (li.get("default_actions") or [])
         ]
         lb["tls"] = bool(tls)
+        if any((g.get("protocol") or "").upper() == "HTTPS" for g in groups):
+            lb["backend_tls"] = True
+            notes.append(
+                "targets are reached over HTTPS (TLS bridging, public CAs trusted). For private or "
+                "self-signed backend certificates add tls_config.custom_ca."
+            )
     else:
-        lb["listeners"] = [
-            {
-                "name": f"tcp-{li['port']}",
-                "port": li["port"],
-                "protocol": "PROTOCOL_TCP",
-            }
-            for li in listeners
-        ]
-        if tls:
+        lb["listeners"] = []
+        seen: set[str] = set()
+        for li in listeners:
+            source = (li.get("protocol") or "TCP").upper()
+            protocols = NLB_PROTOCOLS.get(source)
+            if protocols is None:
+                notes.append(
+                    f"listener {source}:{li['port']} has no STACKIT network load balancer "
+                    "equivalent and is not migrated"
+                )
+                continue
+            for protocol in protocols:
+                short = protocol.removeprefix("PROTOCOL_").split("_")[0].lower()
+                name = f"{short}-{li['port']}"
+                if name in seen:
+                    continue
+                seen.add(name)
+                lb["listeners"].append(
+                    {"name": name, "port": li["port"], "protocol": protocol}
+                )
+        if tls or any(
+            (li.get("protocol") or "").upper() in ("TLS", "HTTPS") for li in listeners
+        ):
             notes.append(
                 "TLS terminated on the AWS load balancer is passed through to the targets on STACKIT (L4)."
             )

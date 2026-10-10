@@ -71,7 +71,9 @@ def run(
     result = Result(
         args=[args[0], *argv[1:]],
         returncode=completed.returncode,
-        stdout=completed.stdout if max_output is None else completed.stdout[-max_output:],
+        stdout=completed.stdout
+        if max_output is None
+        else completed.stdout[-max_output:],
         stderr=completed.stderr[-MAX_OUTPUT:],
     )
     if check and completed.returncode != 0:

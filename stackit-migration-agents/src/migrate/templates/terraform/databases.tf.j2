@@ -43,6 +43,10 @@ resource "stackit_postgresflex_instance" "{{ p.tf }}" {
 
   lifecycle {
     precondition {
+      condition     = length(local.{{ p.tf }}_acl) > 0
+      error_message = "No network may reach {{ p.name }}: no client network with a public IP was found. Set var.extra_db_allowed_cidrs to your admin or VPN ranges."
+    }
+    precondition {
       condition     = length(local.{{ p.tf }}_flavors) == 1
       error_message = "No unique PostgreSQL Flex flavor with {{ p.flavor.cpu }} CPU / {{ p.flavor.memory_gb }} GiB ({{ p.flavor.node_type }}). Check `stackit postgresflex flavor list`."
     }
@@ -75,6 +79,13 @@ resource "stackit_mariadb_instance" "{{ d.tf }}" {
 
   parameters = {
     sgw_acl = join(",", local.{{ d.tf }}_acl)
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(local.{{ d.tf }}_acl) > 0
+      error_message = "No network may reach {{ d.name }}: no client network with a public IP was found. Set var.extra_db_allowed_cidrs to your admin or VPN ranges."
+    }
   }
 }
 

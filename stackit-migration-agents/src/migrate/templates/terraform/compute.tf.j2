@@ -14,7 +14,7 @@ resource "stackit_key_pair" "migration" {
 resource "stackit_network_interface" "{{ s.tf }}" {
   project_id         = var.project_id
   network_id         = stackit_network.{{ s.network_tf }}.network_id
-  name               = "{{ s.name }}-nic"
+  name               = {{ s.nic_name | hcl }}
   security           = true
   security_group_ids = [{% for sg in s.security_group_tfs %}stackit_security_group.{{ sg }}.security_group_id{% if not loop.last %}, {% endif %}{% endfor %}]
   labels             = var.labels

@@ -19,7 +19,14 @@ from migrate.console import RichReporter
 from migrate.llm import LLMNotConfiguredError
 from migrate.runner import GatePendingError, NoPendingGateError, Outcome, Runner
 from migrate.runs import RunNotFoundError, list_runs, read_plan
-from migrate.state import DeployMode, MigrationPlan, RunOptions, SourceCloud
+from migrate.state import (
+    CutoverStatus,
+    DeploymentStatus,
+    DeployMode,
+    MigrationPlan,
+    RunOptions,
+    SourceCloud,
+)
 
 app = typer.Typer(
     name="migrate",
@@ -123,6 +130,11 @@ def _show(outcome: Outcome) -> None:
     console.print(
         f"[dim]Plan:[/] {root}/migration-plan.json   [dim]Audit:[/] {root}/audit.jsonl"
     )
+    if outcome.halted and (
+        plan.deployment.status == DeploymentStatus.FAILED
+        or plan.data_migration.status == CutoverStatus.FAILED
+    ):
+        raise typer.Exit(code=3)  # a step failed (not just a dry run or a rejection)
 
 
 def _display_path(path: Path) -> str:

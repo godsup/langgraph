@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from migrate.approval import SECRET_ENV, ApprovalError, ApprovalTokens, sha256_file
+from migrate.approval import SECRET_ENV, ApprovalError, ApprovalTokens, sha256_bundle
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def test_terraform_apply_refuses_without_valid_token(run_env: Path) -> None:
         forged = ApprovalTokens("f" * 32).issue(
             run_id=run_env.name,
             action="terraform.apply",
-            artifact_sha256=sha256_file(tf / "tfplan"),
+            artifact_sha256=sha256_bundle(tf),
         )
         server.terraform_apply(
             workdir=str(tf), plan_file="tfplan", approval_token=forged
@@ -38,7 +38,7 @@ def test_terraform_apply_refuses_without_valid_token(run_env: Path) -> None:
     good = ApprovalTokens("s" * 32).issue(
         run_id=run_env.name,
         action="terraform.apply",
-        artifact_sha256=sha256_file(tf / "tfplan"),
+        artifact_sha256=sha256_bundle(tf),
     )
     assert server.terraform_apply(
         workdir=str(tf), plan_file="tfplan", approval_token=good
@@ -52,12 +52,71 @@ def test_terraform_apply_rejects_plan_changed_after_approval(run_env: Path) -> N
     token = ApprovalTokens("s" * 32).issue(
         run_id=run_env.name,
         action="terraform.apply",
-        artifact_sha256=sha256_file(tf / "tfplan"),
+        artifact_sha256=sha256_bundle(tf),
     )
     (tf / "tfplan").write_text("a different plan")
     with pytest.raises(ApprovalError, match="hash mismatch"):
         server.terraform_apply(
             workdir=str(tf), plan_file="tfplan", approval_token=token
+        )
+
+
+def test_terraform_apply_rejects_code_changed_after_approval(run_env: Path) -> None:
+    from mcp_servers.stackit import server
+
+    tf = run_env / "terraform"
+    (tf / "main.tf").write_text("# approved code\n")
+    token = ApprovalTokens("s" * 32).issue(
+        run_id=run_env.name, action="terraform.apply", artifact_sha256=sha256_bundle(tf)
+    )
+    (tf / "main.tf").write_text("# edited after approval\n")
+    with pytest.raises(ApprovalError, match="hash mismatch"):
+        server.terraform_apply(
+            workdir=str(tf), plan_file="tfplan", approval_token=token
+        )
+
+
+def test_terraform_apply_only_uses_the_saved_plan_file(run_env: Path) -> None:
+    from mcp_servers.stackit import server
+
+    tf = run_env / "terraform"
+    token = ApprovalTokens("s" * 32).issue(
+        run_id=run_env.name, action="terraform.apply", artifact_sha256=sha256_bundle(tf)
+    )
+    with pytest.raises(PermissionError):
+        server.terraform_apply(
+            workdir=str(tf), plan_file="other.plan", approval_token=token
+        )
+
+
+def test_pull_request_refuses_apply_token_and_changed_code(run_env: Path) -> None:
+    from mcp_servers.stackit import server
+
+    tf = run_env / "terraform"
+    (tf / "main.tf").write_text("# approved code\n")
+    issuer = ApprovalTokens("s" * 32)
+    apply_token = issuer.issue(
+        run_id=run_env.name, action="terraform.apply", artifact_sha256=sha256_bundle(tf)
+    )
+    with pytest.raises(ApprovalError, match="not 'terraform.pr'"):
+        server.open_pull_request(
+            workdir=str(tf),
+            plan_file="tfplan",
+            approval_token=apply_token,
+            title="t",
+            body="b",
+        )
+    pr_token = issuer.issue(
+        run_id=run_env.name, action="terraform.pr", artifact_sha256=sha256_bundle(tf)
+    )
+    (tf / "main.tf").write_text("# edited after approval\n")
+    with pytest.raises(ApprovalError, match="hash mismatch"):
+        server.open_pull_request(
+            workdir=str(tf),
+            plan_file="tfplan",
+            approval_token=pr_token,
+            title="t",
+            body="b",
         )
 
 

@@ -6,7 +6,7 @@
 # REVIEW: {{ note }}
 {% endfor %}
 {% if lb.network_tfs | length > 1 %}
-# REVIEW: targets sit in {{ lb.network_tfs | length }} networks; the first is used for listeners and targets, the others for targets only.
+# REVIEW: targets sit in 2 networks; the first is used for listeners and targets, the second for targets only.
 {% endif %}
 # REVIEW: health check timings are defaults; tune them to the application.
 {% if lb.tls %}
@@ -74,6 +74,11 @@ resource "stackit_application_load_balancer" "{{ lb.tf }}" {
     {
       name        = "targets"
       target_port = {{ lb.target_port }}
+{% if lb.backend_tls %}
+      tls_config = {
+        enabled = true
+      }
+{% endif %}
       targets = [
 {% for t in lb.targets %}
         {
@@ -132,12 +137,10 @@ resource "stackit_loadbalancer" "{{ lb.tf }}" {
   ]
 
   networks = [
-{% for net in lb.network_tfs %}
     {
-      network_id = stackit_network.{{ net }}.network_id
-      role       = "{{ 'ROLE_LISTENERS_AND_TARGETS' if loop.first else 'ROLE_TARGETS' }}"
+      network_id = stackit_network.{{ lb.network_tfs[0] }}.network_id
+      role       = "ROLE_LISTENERS_AND_TARGETS"
     },
-{% endfor %}
   ]
 
   target_pools = [
