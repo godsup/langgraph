@@ -1,0 +1,82 @@
+name: stackit-migration-agents
+
+on:
+  push:
+    paths:
+      - "stackit-migration-agents/**"
+      - ".github/workflows/stackit-migration-agents.yml"
+  pull_request:
+    paths:
+      - "stackit-migration-agents/**"
+      - ".github/workflows/stackit-migration-agents.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stackit-migration-agents-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: stackit-migration-agents
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check src tests
+      - run: uv run ruff format --check src tests
+
+  test:
+    runs-on: ubuntu-24.04
+    env:
+      MIGRATE_TF_VALIDATE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - name: Install rclone (integration tests)
+        run: sudo apt-get update && sudo apt-get install -y rclone
+      - run: uv sync --locked
+      - run: uv run pytest -ra
+      - name: Mock end-to-end demo
+        run: uv run migrate run --source aws --mock --yes
+
+  terraform:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - run: uv sync --locked
+      - name: Render Terraform from the mock fixtures
+        run: uv run python -m migrate.tools.render_fixture_terraform build/terraform
+      - name: terraform fmt (generated)
+        run: terraform -chdir=build/terraform fmt -check -recursive
+      - name: terraform validate (generated)
+        run: |
+          terraform -chdir=build/terraform init -backend=false -input=false
+          terraform -chdir=build/terraform validate
+      - name: terraform fmt + validate (demo AWS app)
+        run: |
+          terraform -chdir=demo/aws-sample-app fmt -check
+          terraform -chdir=demo/aws-sample-app init -backend=false -input=false
+          terraform -chdir=demo/aws-sample-app validate

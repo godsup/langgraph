@@ -96,11 +96,28 @@ class Settings(BaseSettings):
         "observability_url",
         "stackit_project_id",
         "stackit_image_id",
+        "stackit_service_account_key_path",
+        "stackit_private_key_path",
+        "ssh_public_key_path",
+        "pr_repo_path",
+        "checkpoint_sqlite_path",
+        "aws_profile",
+        "approval_secret",
+        "llm_api_key",
+        "checkpoint_postgres_dsn",
+        "source_pg_dsn",
+        "target_pg_dsn",
+        "stackit_s3_access_key_id",
+        "stackit_s3_secret_access_key",
+        "observability_username",
+        "observability_password",
+        "webhook_url",
         mode="before",
     )
     @classmethod
     def _empty_is_none(cls, value: Any) -> Any:
-        # `LLM_BASE_URL=` in .env means "use the OpenAI default".
+        # Empty values in .env mean "not set" (e.g. `LLM_BASE_URL=` means the
+        # OpenAI default; an empty path must not become the current directory).
         if isinstance(value, str) and not value.strip():
             return None
         return value

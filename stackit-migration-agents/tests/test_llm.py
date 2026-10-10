@@ -147,3 +147,16 @@ def test_recorded_chat_model_replays_tool_calls() -> None:
     first = model.bind_tools([get_metric]).invoke([HumanMessage("x")])
     assert first.tool_calls[0]["name"] == "get_metric"
     assert model.invoke([HumanMessage("x")]).content == "done"
+
+
+def test_empty_env_values_mean_unset() -> None:
+    settings = Settings(
+        _env_file=None,
+        ssh_public_key_path="",
+        stackit_service_account_key_path="",
+        llm_api_key="",
+        webhook_url="",
+    )
+    assert settings.ssh_public_key_path is None
+    assert settings.stackit_service_account_key_path is None
+    assert settings.llm_api_key is None and settings.webhook_url is None
